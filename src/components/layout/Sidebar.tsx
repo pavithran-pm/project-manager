@@ -18,7 +18,7 @@ import {
   SlidersHorizontal,
   Zap,
 } from 'lucide-react'
-import { unreadCountForTab, useAppStore } from '../../lib/store'
+import { comingSoon, unreadCountForTab, useAppStore } from '../../lib/store'
 import type { FolderItem, Space, SpaceFolder } from '../../lib/types'
 import { Avatar } from '../ui/Avatar'
 import { CountBadge } from '../ui/CountBadge'
@@ -93,6 +93,7 @@ function WhiteboardIcon() {
 function FolderItemRow({ spaceId, item }: { spaceId: string; item: FolderItem }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const notify = useAppStore((s) => s.notify)
   const navigable = item.icon === 'sprint' || item.icon === 'list'
   const route = `/space/${spaceId}/list/${item.id}`
   const active = navigable && (pathname === route || pathname.startsWith(`${route}/`))
@@ -107,7 +108,12 @@ function FolderItemRow({ spaceId, item }: { spaceId: string; item: FolderItem })
     )
 
   return (
-    <Row active={active} onClick={navigable ? () => navigate(route) : undefined}>
+    <Row
+      active={active}
+      onClick={
+        navigable ? () => navigate(route) : () => comingSoon(notify, 'The Whiteboard view')
+      }
+    >
       {icon}
       <span className="truncate">{item.name}</span>
       {item.count !== undefined && (
@@ -124,6 +130,7 @@ function FolderBlock({ spaceId, folder }: { spaceId: string; folder: SpaceFolder
   const [open, setOpen] = useState(true)
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const addSprintToFolder = useAppStore((s) => s.addSprintToFolder)
   const route = `/space/${spaceId}/folder/${folder.id}`
   const active = pathname === route || pathname.startsWith(`${route}/`)
 
@@ -144,7 +151,7 @@ function FolderBlock({ spaceId, folder }: { spaceId: string; folder: SpaceFolder
           {folder.items.map((item) => (
             <FolderItemRow key={item.id} spaceId={spaceId} item={item} />
           ))}
-          <Row muted>
+          <Row muted onClick={() => addSprintToFolder(spaceId, folder.id)}>
             <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">Create Sprint</span>
           </Row>
@@ -185,7 +192,10 @@ function SpaceBlock({ space }: { space: Space }) {
         <button
           type="button"
           aria-label={`${space.name} settings`}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            comingSoon(useAppStore.getState().notify, 'The Space settings menu')
+          }}
           className="ml-auto flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-hover"
         >
           <Ellipsis className="h-3.5 w-3.5 text-ink-soft" />
@@ -231,8 +241,10 @@ export function Sidebar() {
   const spaces = useAppStore((s) => s.spaces)
   const notifications = useAppStore((s) => s.notifications)
   const openCreateSpace = useAppStore((s) => s.openCreateSpace)
+  const notify = useAppStore((s) => s.notify)
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const soon = (what: string) => () => comingSoon(notify, what)
 
   const primaryUnread = unreadCountForTab(notifications, 'primary')
 
@@ -245,6 +257,7 @@ export function Sidebar() {
           <button
             type="button"
             aria-label="Create"
+            onClick={soon('Quick create')}
             className="flex cursor-pointer items-center px-1 py-0.5 hover:bg-hover"
           >
             <Plus className="h-3.5 w-3.5 text-ink-soft" />
@@ -252,6 +265,7 @@ export function Sidebar() {
           <button
             type="button"
             aria-label="Create options"
+            onClick={soon('The create menu')}
             className="flex cursor-pointer items-center border-l border-line-strong px-1 py-0.5 hover:bg-hover"
           >
             <ChevronDown className="h-3 w-3 text-ink-soft" />
@@ -272,19 +286,19 @@ export function Sidebar() {
               </span>
             )}
           </Row>
-          <Row>
+          <Row onClick={soon('The Replies screen')}>
             <Reply className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">Replies</span>
           </Row>
-          <Row>
+          <Row onClick={soon('The Assigned Comments screen')}>
             <AtSign className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">Assigned Comments</span>
           </Row>
-          <Row>
+          <Row onClick={soon('The My Tasks screen')}>
             <CircleCheckBig className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">My Tasks</span>
           </Row>
-          <Row>
+          <Row onClick={soon('The expanded Home menu')}>
             <Ellipsis className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">More</span>
           </Row>
@@ -292,7 +306,7 @@ export function Sidebar() {
 
         {/* AI Chats */}
         <Section label="AI Chats">
-          <Row muted>
+          <Row muted onClick={soon('AI Chats')}>
             <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">Ask, Build, Create</span>
           </Row>
@@ -301,7 +315,7 @@ export function Sidebar() {
         {/* Channels */}
         <Section label="Channels">
           {channels.map((channel) => (
-            <Row key={channel.id}>
+            <Row key={channel.id} onClick={soon(`The #${channel.name} channel`)}>
               {channel.iconStyle === 'filled' ? (
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-[#3d434d]">
                   <Hash className="h-2.5 w-2.5 text-white" />
@@ -315,7 +329,7 @@ export function Sidebar() {
               </span>
             </Row>
           ))}
-          <Row muted>
+          <Row muted onClick={soon('Channel creation')}>
             <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">Add Channel</span>
           </Row>
@@ -327,13 +341,13 @@ export function Sidebar() {
             const user = users[id]
             if (!user) return null
             return (
-              <Row key={id}>
+              <Row key={id} onClick={soon(`Direct messages with ${user.name}`)}>
                 <Avatar initials={user.initials} color={user.color} size={20} />
                 <span className="truncate">{user.name}</span>
               </Row>
             )
           })}
-          <Row muted>
+          <Row muted onClick={soon('New direct messages')}>
             <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
             <span className="truncate">New message</span>
           </Row>
@@ -356,7 +370,7 @@ export function Sidebar() {
             </button>
           }
         >
-          <Row>
+          <Row onClick={soon('The Everything view')}>
             <Shapes className="h-4 w-4 shrink-0 text-brand" />
             <span className="truncate">
               All Tasks
@@ -377,6 +391,7 @@ export function Sidebar() {
       <div className="shrink-0 border-t border-line p-2">
         <button
           type="button"
+          onClick={soon('Sidebar customization')}
           className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line bg-white text-[13px] text-ink-soft shadow-sm hover:bg-hover"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />

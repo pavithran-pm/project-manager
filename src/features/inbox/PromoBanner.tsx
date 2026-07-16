@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
-import { useAppStore } from '../../lib/store'
+import { comingSoon, useAppStore } from '../../lib/store'
 
 export function PromoBanner() {
   const bannerDismissed = useAppStore((s) => s.bannerDismissed)
   const dismissBanner = useAppStore((s) => s.dismissBanner)
+  const notify = useAppStore((s) => s.notify)
 
   if (bannerDismissed) return null
 
@@ -11,7 +12,11 @@ export function PromoBanner() {
     <div className="relative flex h-9 min-h-9 w-full shrink-0 items-center justify-center bg-gradient-to-r from-[#fdeef3] via-[#fbf0f7] to-[#f3effc] px-10 text-[13px] text-ink">
       <span className="truncate">
         Think Brain<sup>2</sup> won&apos;t impress you? Hand it one task.{' '}
-        <button type="button" className="cursor-pointer font-medium underline hover:opacity-70">
+        <button
+          type="button"
+          onClick={() => comingSoon(notify, 'Brain² AI')}
+          className="cursor-pointer font-medium underline hover:opacity-70"
+        >
           Fine, prove me wrong →
         </button>
       </span>

@@ -13,7 +13,7 @@ import {
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { findFolder, useAppStore } from '../../lib/store'
+import { comingSoon, findFolder, useAppStore } from '../../lib/store'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -56,8 +56,10 @@ function BurndownChart() {
 export function OverviewTab({ folderId }: { folderId: string }) {
   const spaces = useAppStore((s) => s.spaces)
   const docs = useAppStore((s) => s.docs)
+  const notify = useAppStore((s) => s.notify)
   const [hintVisible, setHintVisible] = useState(true)
   const navigate = useNavigate()
+  const soon = (what: string) => () => comingSoon(notify, what)
 
   const found = findFolder(spaces, folderId)
   if (!found) return null
@@ -74,7 +76,9 @@ export function OverviewTab({ folderId }: { folderId: string }) {
             Get the most out of your Overview! Add, reorder, and resize cards to customize this
             page
           </span>
-          <button className="cursor-pointer text-ink underline">Get Started</button>
+          <button onClick={soon('Overview customization')} className="cursor-pointer text-ink underline">
+            Get Started
+          </button>
           <button
             onClick={() => setHintVisible(false)}
             className="absolute top-1/2 right-2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
@@ -90,17 +94,29 @@ export function OverviewTab({ folderId }: { folderId: string }) {
           <RefreshCw className="h-[13px] w-[13px]" />
           <span>Loading...</span>
         </div>
-        <button className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-line-strong px-2.5 text-[12.5px] text-ink-soft hover:bg-hover">
+        <button
+          onClick={soon('Auto-refresh settings')}
+          className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-line-strong px-2.5 text-[12.5px] text-ink-soft hover:bg-hover"
+        >
           <Clock className="h-3 w-3" />
           Auto refresh: On
         </button>
-        <button className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-hover">
+        <button
+          onClick={soon('Overview filters')}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
+        >
           <ListFilter className="h-4 w-4 text-ink-soft" />
         </button>
-        <button className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-hover">
+        <button
+          onClick={soon('Overview settings')}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
+        >
           <Settings className="h-4 w-4 text-ink-soft" />
         </button>
-        <button className="flex h-7 cursor-pointer items-center gap-1 rounded-md bg-[#1f2228] px-3 text-[13px] font-medium text-white hover:bg-black">
+        <button
+          onClick={soon('Custom cards')}
+          className="flex h-7 cursor-pointer items-center gap-1 rounded-md bg-[#1f2228] px-3 text-[13px] font-medium text-white hover:bg-black"
+        >
           <Plus className="h-[13px] w-[13px]" />
           Card
         </button>
@@ -128,7 +144,12 @@ export function OverviewTab({ folderId }: { folderId: string }) {
             {docs.map((doc) => (
               <div key={doc.id} className="flex h-8 items-center gap-2">
                 <FileText className="h-3.5 w-3.5 shrink-0 text-ink-soft" />
-                <span className="truncate text-[13px] text-ink">{doc.name}</span>
+                <button
+                  onClick={soon('The Docs screen')}
+                  className="cursor-pointer truncate text-[13px] text-ink hover:underline"
+                >
+                  {doc.name}
+                </button>
                 <span className="truncate text-[12px] text-ink-faint">• in {doc.location}</span>
               </div>
             ))}
@@ -147,7 +168,10 @@ export function OverviewTab({ folderId }: { folderId: string }) {
               <p className="max-w-[220px] text-center text-[12.5px] text-ink-soft">
                 Bookmarks make it easy to save ClickUp items or any URL from around the web.
               </p>
-              <button className="h-8 cursor-pointer rounded-md bg-[#1f2228] px-3 text-[13px] font-medium text-white hover:bg-black">
+              <button
+                onClick={soon('Bookmarks')}
+                className="h-8 cursor-pointer rounded-md bg-[#1f2228] px-3 text-[13px] font-medium text-white hover:bg-black"
+              >
                 Add Bookmark
               </button>
             </div>
@@ -160,7 +184,9 @@ export function OverviewTab({ folderId }: { folderId: string }) {
               <Upload className="h-4 w-4" />
               <div>
                 Drop files here or{' '}
-                <button className="cursor-pointer underline hover:text-ink">attach</button>
+                <button onClick={soon('File attachments')} className="cursor-pointer underline hover:text-ink">
+                  attach
+                </button>
               </div>
             </div>
           </Card>

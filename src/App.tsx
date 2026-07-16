@@ -2,6 +2,8 @@ import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router
 import { IconRail } from './components/layout/IconRail'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
+import { SearchModal } from './components/ui/SearchModal'
+import { ToastHost } from './components/ui/ToastHost'
 import { InboxPage } from './features/inbox/InboxPage'
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
 import { FolderPage } from './features/space/FolderPage'
@@ -55,6 +57,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>
+        <SearchModal />
+        <ToastHost />
       </div>
     </Router>
   )

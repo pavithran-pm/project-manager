@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, Info, UserRound, X } from 'lucide-react'
-import { useAppStore } from '../../lib/store'
+import { comingSoon, useAppStore } from '../../lib/store'
 
 /** "Create a Space" dialog. Always mounted by Sidebar; renders nothing until opened. */
 export function CreateSpaceModal() {
   const open = useAppStore((s) => s.createSpaceOpen)
   const closeCreateSpace = useAppStore((s) => s.closeCreateSpace)
   const createSpace = useAppStore((s) => s.createSpace)
+  const notify = useAppStore((s) => s.notify)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -34,12 +35,12 @@ export function CreateSpaceModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeCreateSpace()
       }}
     >
-      <div className="relative w-[560px] max-w-[92vw] rounded-xl bg-white p-6 shadow-2xl">
+      <div className="animate-pop-in relative w-[560px] max-w-[92vw] rounded-xl bg-white p-6 shadow-2xl">
         <button
           type="button"
           aria-label="Close"
@@ -84,6 +85,7 @@ export function CreateSpaceModal() {
           <Info className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
           <button
             type="button"
+            onClick={() => comingSoon(notify, 'Permission levels')}
             className="ml-auto flex h-7 cursor-pointer items-center gap-1 rounded-md border border-line-strong px-2 text-[12.5px] text-ink hover:bg-hover"
           >
             Full edit
@@ -119,6 +121,7 @@ export function CreateSpaceModal() {
         <div className="-mx-6 -mb-6 mt-6 flex items-center justify-between rounded-b-xl border-t border-line bg-panel px-6 py-4">
           <button
             type="button"
+            onClick={() => comingSoon(notify, 'Space templates')}
             className="cursor-pointer text-[13.5px] text-ink-soft hover:text-ink"
           >
             Use Templates

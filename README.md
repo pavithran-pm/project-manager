@@ -46,4 +46,24 @@ docs/
 ```
 
 Seed data lives in `src/lib/seed.ts` — swap it there to change workspace
-content (spaces, sprints, notifications, people).
+content (spaces, sprints, notifications, people). All mutations (created
+tasks/spaces, assignments, statuses, favorites) persist to localStorage.
+
+## Working functionality
+
+- Inbox: tabs, clear/snooze/mark-read, unread-only filter, live badges
+- Tasks: create inline, change status (moves groups), assign, due dates
+  (overdue coloring), priorities, time estimates — all via popovers; summary
+  cards recompute live
+- Sidebar: create Space (modal) / Folder / Sprint Folder / List / Sprint,
+  navigate everywhere, favorites star
+- Global search: Ctrl+K, results across tasks/sprints/lists/docs, Enter to open
+- Anything whose screen isn't replicated yet responds with a toast pointing at
+  the build list
+
+## Testing
+
+```bash
+npm run dev            # in one terminal
+node scripts/e2e.mjs   # 45 end-to-end Playwright checks
+```

@@ -12,7 +12,7 @@ import {
   ListTodo,
   Zap,
 } from 'lucide-react'
-import { useAppStore } from '../../lib/store'
+import { comingSoon, useAppStore } from '../../lib/store'
 
 interface CreateMenuProps {
   spaceId: string
@@ -62,6 +62,12 @@ function MenuItem({
 /** Space "+" popover — the panel only; Sidebar anchors/positions it and owns the backdrop. */
 export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
   const addListToSpace = useAppStore((s) => s.addListToSpace)
+  const addFolderToSpace = useAppStore((s) => s.addFolderToSpace)
+  const notify = useAppStore((s) => s.notify)
+  const soon = (what: string) => () => {
+    comingSoon(notify, what)
+    onClose()
+  }
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -72,7 +78,7 @@ export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
   }, [onClose])
 
   return (
-    <div className="absolute z-50 w-[280px] rounded-xl border border-line bg-white p-1.5 shadow-xl">
+    <div className="animate-pop-in absolute z-50 w-[280px] rounded-xl border border-line bg-white p-1.5 shadow-xl">
       <div className="px-2.5 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">Create</div>
       <MenuItem
         icon={<ListTodo className="h-4 w-4 text-[#6e56cf]" />}
@@ -87,38 +93,48 @@ export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
         icon={<Folder className="h-4 w-4 text-ink-soft" />}
         name="Folder"
         description="Group Lists, Docs & more"
-        onClick={onClose}
+        onClick={() => {
+          addFolderToSpace(spaceId, 'folder')
+          onClose()
+        }}
       />
       <MenuItem
         icon={<FolderKanban className="h-4 w-4 text-ink-soft" />}
         name="Sprint Folder"
         description="Organize your Sprints"
-        onClick={onClose}
+        onClick={() => {
+          addFolderToSpace(spaceId, 'sprintFolder')
+          onClose()
+        }}
       />
       <div className="my-1 border-t border-line" />
-      <MenuItem icon={<FileText className="h-4 w-4 text-[#2e9ded]" />} name="Doc" onClick={onClose} />
+      <MenuItem
+        icon={<FileText className="h-4 w-4 text-[#2e9ded]" />}
+        name="Doc"
+        onClick={soon('Doc creation')}
+      />
       <MenuItem
         icon={<LayoutDashboard className="h-4 w-4 text-[#d6336c]" />}
         name="Dashboard"
-        onClick={onClose}
+        onClick={soon('Dashboard creation')}
       />
-      <MenuItem icon={<WhiteboardSquare />} name="Whiteboard" onClick={onClose} />
+      <MenuItem icon={<WhiteboardSquare />} name="Whiteboard" onClick={soon('Whiteboards')} />
       <MenuItem
         icon={<ClipboardList className="h-4 w-4 text-[#8a5fe8]" />}
         name="Form"
-        onClick={onClose}
+        onClick={soon('Forms')}
       />
       <div className="my-1 border-t border-line" />
       <MenuItem
         icon={<ArrowDownToLine className="h-4 w-4 text-ink-soft" />}
         name="Imports"
         trailing={<ChevronRight className="h-3.5 w-3.5 text-ink-faint" />}
-        onClick={onClose}
+        onClick={soon('Imports')}
       />
       <MenuItem
         icon={<LayoutTemplate className="h-4 w-4 text-ink-soft" />}
         name="Templates"
-        onClick={onClose}
+        onClick={soon('Templates')}
       />
     </div>
   )
