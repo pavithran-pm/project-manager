@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { IconRail } from './components/layout/IconRail'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
@@ -7,9 +7,13 @@ import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
 import { FolderPage } from './features/space/FolderPage'
 import { ListPage } from './features/space/ListPage'
 
+// Hash routing lets the single-file build (artifact / static hosting) deep-link
+// without a history-fallback server; the dev/production server keeps clean URLs.
+const Router = import.meta.env.VITE_HASH_ROUTER === '1' ? HashRouter : BrowserRouter
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <div className="flex h-full flex-col">
         <TopBar />
         <div className="flex min-h-0 flex-1">
@@ -52,6 +56,6 @@ export default function App() {
           </Routes>
         </div>
       </div>
-    </BrowserRouter>
+    </Router>
   )
 }
