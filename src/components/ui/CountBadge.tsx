@@ -3,7 +3,7 @@ interface CountBadgeProps {
   /**
    * outline — thin gray ring, gray number (inbox row counts)
    * red — filled red circle, white number (unread badges)
-   * dark — filled dark pill, white number (sidebar "35" style)
+   * dark — filled pink pill, white number (sidebar "35" style)
    * plain — bare muted number (sidebar sprint counts)
    */
   variant?: 'outline' | 'red' | 'dark' | 'plain'
@@ -22,7 +22,7 @@ export function CountBadge({ value, variant = 'outline' }: CountBadgeProps) {
   }
   if (variant === 'dark') {
     return (
-      <span className="flex h-[18px] min-w-[22px] items-center justify-center rounded-full bg-[#3d434d] px-1.5 text-[10.5px] font-semibold text-white tabular-nums">
+      <span className="flex h-[18px] min-w-[22px] items-center justify-center rounded-full bg-[#d6336c] px-1.5 text-[10.5px] font-semibold text-white tabular-nums">
         {value}
       </span>
     )

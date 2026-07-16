@@ -1,4 +1,12 @@
-import type { AppNotification, Channel, Space, User } from './types'
+import type {
+  AppNotification,
+  Channel,
+  DocItem,
+  Space,
+  Task,
+  TaskStatus,
+  User,
+} from './types'
 
 export const WORKSPACE_NAME = 'Techjays'
 
@@ -19,7 +27,7 @@ export const dmUserIds = ['abdulRahuman', 'abirami', 'abdullah', 'abinaya']
 
 export const channels: Channel[] = [
   { id: 'welcome', name: 'Welcome' },
-  { id: 'general', name: 'General', suffix: 'Techjays' },
+  { id: 'general', name: 'General', suffix: 'Techjays', iconStyle: 'filled' },
 ]
 
 export const spaces: Space[] = [
@@ -37,13 +45,124 @@ export const spaces: Space[] = [
           { id: 'sprint1', name: 'Sprint 1 (24/11 - 15/12)', icon: 'sprint', count: 1 },
           { id: 'sprint2', name: 'Sprint 2 (16/12 - 7/1)', icon: 'sprint', count: 12 },
           { id: 'sprint3', name: 'Sprint 3 (12/1 - 1/2)', icon: 'sprint', count: 14 },
-          { id: 'retro1', name: 'Sprint 1 Retro Board', icon: 'board' },
+          { id: 'retro1', name: 'Sprint 1 Retro Board', icon: 'whiteboard' },
           { id: 'sprint4', name: 'Sprint 4 (2/2 - 22/2)', icon: 'sprint', count: 35, countStyle: 'pill' },
-          { id: 'list1', name: 'List', icon: 'list', count: 1 },
         ],
       },
     ],
+    items: [
+      { id: 'list1', name: 'List', icon: 'list', count: 1 },
+      { id: 'backlog', name: 'Backlog', icon: 'list', count: 47 },
+      { id: 'retro-wb-1', name: 'Sprint 1 : Retro board', icon: 'whiteboard' },
+      { id: 'retro-wb-2', name: 'Sprint 1 : Retro board', icon: 'whiteboard' },
+    ],
   },
+]
+
+export const docs: DocItem[] = [
+  {
+    id: 'doc1',
+    name: 'Post-Migration Updates (Access ...',
+    location: 'Post-Migration Updates (Access...)',
+  },
+]
+
+// ---- Task statuses (ordered as they appear in the list view) ----
+
+export const taskStatuses: Record<string, TaskStatus> = {
+  devCompleted: { id: 'devCompleted', label: 'DEV COMPLETED', color: '#87902e' },
+  holdForInfo: { id: 'holdForInfo', label: 'HOLD FOR INFORMATION', color: '#d8354f' },
+  qaInProgress: { id: 'qaInProgress', label: 'QA IN PROGRESS', color: '#e8871e' },
+  inProgress: { id: 'inProgress', label: 'IN PROGRESS', color: '#4194f6' },
+  toDo: { id: 'toDo', label: 'TO DO', color: '#87909e' },
+  complete: { id: 'complete', label: 'COMPLETE', color: '#27ae60' },
+}
+
+/** Render order of status groups in list views */
+export const statusOrder = [
+  'devCompleted',
+  'holdForInfo',
+  'qaInProgress',
+  'inProgress',
+  'toDo',
+  'complete',
+]
+
+// ---- Tasks ----
+
+let taskSeq = 0
+function task(listId: string, statusId: string, name: string, extra: Partial<Task> = {}): Task {
+  taskSeq += 1
+  return { id: `t${taskSeq}`, listId, statusId, name, ...extra }
+}
+
+export const tasks: Task[] = [
+  // Sprint 4 (2/2 - 22/2) — transcribed from the reference screenshot
+  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items (Widget)', {
+    subtaskCount: 2, hasDescription: true, estimateHours: 6,
+  }),
+  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items Detailed Page', {
+    subtaskCount: 3, hasDescription: true, estimateHours: 8,
+  }),
+  task('sprint4', 'holdForInfo', 'Microsoft Account Setup', {
+    subtaskCount: 1, estimateHours: 12,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Header', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/5/25', dueOverdue: true, estimateHours: 8,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Sales History', {
+    subtaskCount: 3, hasDescription: true, dueDate: '12/8/25', dueOverdue: true, estimateHours: 18,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Quote History', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true, estimateHours: 18,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Purchase History', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true, estimateHours: 18,
+  }),
+  task('sprint4', 'qaInProgress', 'Product details page - Inventory Forecast Trend Chart', {
+    subtaskCount: 2, hasDescription: true, estimateHours: 16,
+  }),
+  task('sprint4', 'qaInProgress', 'Product details page - Pricing History Chart', {
+    subtaskCount: 2, hasDescription: true, estimateHours: 8,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Stock Status Overview and Location Distribution', {
+    subtaskCount: 2, hasDescription: true, estimateHours: 8,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Warehouse Location Distribution', {
+    subtaskCount: 2, estimateHours: 8,
+  }),
+  task('sprint4', 'qaInProgress', 'Product details page - Reserved Stock Handling', {
+    subtaskCount: 1, estimateHours: 12,
+  }),
+
+  // Earlier sprints — representative content so navigation feels real
+  task('sprint1', 'complete', 'Login & Authentication Flow', {
+    subtaskCount: 4, hasDescription: true, assigneeId: 'abdulRahuman', estimateHours: 16,
+  }),
+  task('sprint2', 'complete', 'Inventory Sync Service', {
+    subtaskCount: 3, hasDescription: true, assigneeId: 'abirami', estimateHours: 24,
+  }),
+  task('sprint2', 'complete', 'Warehouse Master Data Screens', {
+    subtaskCount: 2, assigneeId: 'abdullah', estimateHours: 12,
+  }),
+  task('sprint2', 'inProgress', 'Purchase Order Import', {
+    subtaskCount: 2, hasDescription: true, assigneeId: 'abinaya', estimateHours: 10,
+  }),
+  task('sprint2', 'toDo', 'Email Notification Templates', { estimateHours: 6 }),
+  task('sprint3', 'complete', 'Dashboard - Stock Ageing Widget', {
+    subtaskCount: 2, hasDescription: true, assigneeId: 'anamul', estimateHours: 8,
+  }),
+  task('sprint3', 'inProgress', 'Dashboard - Slow Moving Items', {
+    subtaskCount: 3, hasDescription: true, assigneeId: 'abirami', dueDate: '1/28/26', estimateHours: 14,
+  }),
+  task('sprint3', 'toDo', 'Ask AI - Email Knowledge Source', {
+    subtaskCount: 1, estimateHours: 12,
+  }),
+  task('list1', 'toDo', 'MSM go-live checklist', { hasDescription: true, estimateHours: 4 }),
+  task('backlog', 'toDo', 'Multi-currency support', { estimateHours: 24 }),
+  task('backlog', 'toDo', 'Role-based access control', { subtaskCount: 5, estimateHours: 32 }),
+  task('backlog', 'toDo', 'Audit log viewer', { estimateHours: 12 }),
+  task('backlog', 'toDo', 'Bulk CSV export', { estimateHours: 8 }),
 ]
 
 const base = { read: false, cleared: false, later: false } as const

@@ -4,15 +4,8 @@ import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { InboxPage } from './features/inbox/InboxPage'
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
-
-function HomeLayout() {
-  return (
-    <>
-      <Sidebar />
-      <InboxPage />
-    </>
-  )
-}
+import { FolderPage } from './features/space/FolderPage'
+import { ListPage } from './features/space/ListPage'
 
 export default function App() {
   return (
@@ -23,7 +16,33 @@ export default function App() {
           <IconRail />
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={<HomeLayout />} />
+            <Route
+              path="/home"
+              element={
+                <>
+                  <Sidebar />
+                  <InboxPage />
+                </>
+              }
+            />
+            <Route
+              path="/space/:spaceId/folder/:folderId/:view?"
+              element={
+                <>
+                  <Sidebar />
+                  <FolderPage />
+                </>
+              }
+            />
+            <Route
+              path="/space/:spaceId/list/:listId/:view?"
+              element={
+                <>
+                  <Sidebar />
+                  <ListPage />
+                </>
+              }
+            />
             <Route path="/planner" element={<PlaceholderPage title="Planner" />} />
             <Route path="/ai" element={<PlaceholderPage title="AI" />} />
             <Route path="/teams" element={<PlaceholderPage title="Teams" />} />
