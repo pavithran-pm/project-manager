@@ -65,7 +65,12 @@ export function SpaceHeader({ spaceId, folderId, listId, activeView }: SpaceHead
 
   const favoriteId = listId ?? folderId ?? spaceId
   const isFavorite = favorites.includes(favoriteId)
-  const tabs = listId ? TABS.filter((t) => t.view !== 'overview') : TABS
+  // List pages match the video's Backlog tab set: List sits LAST and is active.
+  const tabs = listId
+    ? ['board', 'timeline', 'workload', 'table', 'list']
+        .map((v) => TABS.find((t) => t.view === v))
+        .filter((t): t is TabDef => t !== undefined)
+    : TABS
   const pathFor = (view: SpaceView) =>
     listId
       ? `/space/${spaceId}/list/${listId}/${view}`

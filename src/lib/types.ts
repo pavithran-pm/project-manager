@@ -5,6 +5,7 @@ export interface User {
   name: string
   initials: string
   color: string
+  deactivated?: boolean
 }
 
 export interface Channel {
@@ -52,11 +53,11 @@ export interface RichSegment {
 }
 
 export type NotifIcon =
-  | { kind: 'space' } // rocket, for "Space shared with you"
-  | { kind: 'access' } // gold medal, for access requests
-  | { kind: 'status'; color: string } // task status ring
-  | { kind: 'clock'; color: string } // due-date / reminder clock
-  | { kind: 'channel' } // channel hash
+  | { kind: 'space' }
+  | { kind: 'access' }
+  | { kind: 'status'; color: string }
+  | { kind: 'clock'; color: string }
+  | { kind: 'channel' }
 
 export type NotifAvatar =
   | { kind: 'user'; userId: string }
@@ -64,9 +65,7 @@ export type NotifAvatar =
 
 export interface AppNotification {
   id: string
-  /** Which inbox tab the notification originally belongs to */
   tab: 'primary' | 'other'
-  /** Date group header it renders under, e.g. "Today" or "January" */
   group: string
   icon: NotifIcon
   title: string
@@ -83,14 +82,65 @@ export interface AppNotification {
 
 // ---- Tasks & views ----
 
+export type StatusGroup = 'not-started' | 'active' | 'done' | 'closed'
+
 export interface TaskStatus {
   id: string
   label: string
-  /** Pill/ring color */
+  /** Canonical color used for pill bg, row status icon, and dropdown glyph */
   color: string
+  group: StatusGroup
+  /** 'outline' renders a white pill with gray border/text (TO DO style) */
+  style?: 'outline'
+}
+
+export interface WorkspaceTag {
+  id: string
+  label: string
+  bg: string
+  text: string
 }
 
 export type TaskPriority = 'urgent' | 'high' | 'normal' | 'low'
+
+export type DocBlock =
+  | { kind: 'h2'; text: string }
+  | { kind: 'sub'; text: string }
+  | { kind: 'p'; text: string }
+  | { kind: 'bullets'; items: string[] }
+  | { kind: 'numbered'; items: string[] }
+
+export interface ChecklistItem {
+  id: string
+  text: string
+  done: boolean
+}
+
+export interface Checklist {
+  id: string
+  title: string
+  items: ChecklistItem[]
+}
+
+export type ActivityEntry =
+  | {
+      kind: 'event'
+      id: string
+      /** Plain text; an optional blue link segment is appended after it */
+      text: string
+      link?: string
+      timeLabel: string
+      /** Collapsed under a "Show more" toggle */
+      hidden?: boolean
+    }
+  | {
+      kind: 'comment'
+      id: string
+      userId: string
+      timeLabel: string
+      /** "@Name" substrings render as purple mentions */
+      body: string
+    }
 
 export interface Task {
   id: string
@@ -98,14 +148,27 @@ export interface Task {
   listId: string
   name: string
   statusId: string
+  /** Set for subtasks — id of the parent task (same listId) */
+  parentId?: string
   subtaskCount?: number
   hasDescription?: boolean
-  assigneeId?: string
+  assigneeIds?: string[]
   /** e.g. "12/5/25" */
   dueDate?: string
   dueOverdue?: boolean
   priority?: TaskPriority
   estimateHours?: number
+  tags?: string[]
+  /** ClickUp-style public id, e.g. "#86d1gzq48" */
+  codeId?: string
+  /** e.g. "Jan 8" or "Nov 20 2025" */
+  createdLabel?: string
+  description?: DocBlock[]
+  sprintPoints?: number
+  checklists?: Checklist[]
+  activity?: ActivityEntry[]
+  /** Stagger some field values into the second load pass (like the video) */
+  loadDelayed?: boolean
 }
 
 export interface DocItem {

@@ -1,18 +1,27 @@
 import type {
   AppNotification,
   Channel,
+  DocBlock,
   DocItem,
   Space,
   Task,
   TaskStatus,
   User,
+  WorkspaceTag,
 } from './types'
 
 export const WORKSPACE_NAME = 'Techjays'
 
 export const users: Record<string, User> = {
   pavithran: { id: 'pavithran', name: 'Pavithran', initials: 'PR', color: '#7b68ee' },
-  arun: { id: 'arun', name: 'Arun RK', initials: 'AR', color: '#0f7f70' },
+  arun: { id: 'arun', name: 'Arun RK', initials: 'AR', color: '#b0491b' },
+  lydia: {
+    id: 'lydia',
+    name: 'Lydia Rubavathy',
+    initials: 'LR',
+    color: '#c2266b',
+    deactivated: true,
+  },
   abdulRahuman: { id: 'abdulRahuman', name: 'Abdul Rahuman M', initials: 'A', color: '#d63f47' },
   abirami: { id: 'abirami', name: 'Abirami Balasubramanian', initials: 'A', color: '#e0484f' },
   abdullah: { id: 'abdullah', name: 'Abdullah Al Mamun', initials: 'A', color: '#e8703a' },
@@ -67,26 +76,63 @@ export const docs: DocItem[] = [
   },
 ]
 
-// ---- Task statuses (ordered as they appear in the list view) ----
+// ---- Status registry (full workspace set from the video's status dropdown) ----
 
 export const taskStatuses: Record<string, TaskStatus> = {
-  devCompleted: { id: 'devCompleted', label: 'DEV COMPLETED', color: '#87902e' },
-  holdForInfo: { id: 'holdForInfo', label: 'HOLD FOR INFORMATION', color: '#d8354f' },
-  qaInProgress: { id: 'qaInProgress', label: 'QA IN PROGRESS', color: '#e8871e' },
-  inProgress: { id: 'inProgress', label: 'IN PROGRESS', color: '#4194f6' },
-  toDo: { id: 'toDo', label: 'TO DO', color: '#87909e' },
-  complete: { id: 'complete', label: 'COMPLETE', color: '#27ae60' },
+  toDo: { id: 'toDo', label: 'TO DO', color: '#87909e', group: 'not-started', style: 'outline' },
+  baInProgress: { id: 'baInProgress', label: 'BA IN PROGRESS', color: '#3e5474', group: 'active' },
+  readyForDev: { id: 'readyForDev', label: 'READY FOR DEV', color: '#20b0c8', group: 'active' },
+  devInProgress: { id: 'devInProgress', label: 'DEV IN PROGRESS', color: '#2ba3d4', group: 'active' },
+  readyForQa: { id: 'readyForQa', label: 'READY FOR QA', color: '#d84f8f', group: 'active' },
+  qaInProgress: { id: 'qaInProgress', label: 'QA IN PROGRESS', color: '#e8871e', group: 'active' },
+  readyForBaReview: { id: 'readyForBaReview', label: 'READY FOR BA REVIEW', color: '#8a5fe8', group: 'active' },
+  baReviewInProgress: { id: 'baReviewInProgress', label: 'BA REVIEW IN PROGRESS', color: '#6f7cd0', group: 'active' },
+  reopen: { id: 'reopen', label: 'REOPEN', color: '#d8354f', group: 'active' },
+  notABug: { id: 'notABug', label: 'NOT A BUG', color: '#5b9dd9', group: 'active' },
+  holdForInfo: { id: 'holdForInfo', label: 'HOLD FOR INFORMATION', color: '#b01830', group: 'active' },
+  moveToNextSprint: { id: 'moveToNextSprint', label: 'MOVE TO NEXT SPRINT', color: '#b8860b', group: 'active' },
+  noFixNeeded: { id: 'noFixNeeded', label: 'NO FIX NEEDED', color: '#64748b', group: 'active' },
+  devCompleted: { id: 'devCompleted', label: 'DEV COMPLETED', color: '#87902e', group: 'active' },
+  notReproduced: { id: 'notReproduced', label: 'NOT REPRODUCED', color: '#c026d3', group: 'active' },
+  qaComplete: { id: 'qaComplete', label: 'QA COMPLETE', color: '#6098a0', group: 'done' },
+  baReviewComplete: { id: 'baReviewComplete', label: 'BA REVIEW COMPLETE', color: '#27ae60', group: 'done' },
+  readyForProduction: { id: 'readyForProduction', label: 'READY FOR PRODUCTION', color: '#16a34a', group: 'done' },
+  movedToProduction: { id: 'movedToProduction', label: 'MOVED TO PRODUCTION', color: '#15803d', group: 'closed' },
 }
 
-/** Render order of status groups in list views */
+/** Render order of status groups in list views and the status dropdown */
 export const statusOrder = [
-  'devCompleted',
   'holdForInfo',
+  'readyForDev',
+  'baInProgress',
+  'devInProgress',
+  'readyForQa',
   'qaInProgress',
-  'inProgress',
+  'readyForBaReview',
+  'baReviewInProgress',
+  'reopen',
+  'notABug',
+  'moveToNextSprint',
+  'noFixNeeded',
+  'devCompleted',
+  'notReproduced',
   'toDo',
-  'complete',
+  'qaComplete',
+  'baReviewComplete',
+  'readyForProduction',
+  'movedToProduction',
 ]
+
+export const workspaceTags: Record<string, WorkspaceTag> = {
+  spt: { id: 'spt', label: 'spt', bg: '#e3f2fe', text: '#0898f8' },
+  msm: { id: 'msm', label: 'msm', bg: '#e3f2fe', text: '#0898f8' },
+  pending: { id: 'pending', label: 'pending', bg: '#ece8fd', text: '#7b68ee' },
+}
+
+/** Which status groups start collapsed, per list (matches the video) */
+export const defaultGroupCollapse: Record<string, string[]> = {
+  backlog: ['holdForInfo', 'baInProgress', 'toDo'],
+}
 
 // ---- Tasks ----
 
@@ -96,8 +142,418 @@ function task(listId: string, statusId: string, name: string, extra: Partial<Tas
   return { id: `t${taskSeq}`, listId, statusId, name, ...extra }
 }
 
+/** Light generic description so every backlog row's ≡ icon has a real preview. */
+function entryConditionDoc(subject: string): DocBlock[] {
+  return [
+    { kind: 'h2', text: 'Entry Condition:' },
+    {
+      kind: 'bullets',
+      items: [
+        'User must be logged in with valid role permissions',
+        `User navigates to the ${subject}`,
+        'All data synced from Eniteo ERP',
+      ],
+    },
+  ]
+}
+
+const READY_FOR_DEV_NAMES = [
+  'Purchase Listing page',
+  'Purchase Order Details page',
+  'Sales Listing page',
+  'Sales Order Details page',
+  'Quote Listing page',
+  'Quote Details page',
+  'Inventory Listing Page',
+  'User Sign In',
+  'Log Out',
+  'Vendor Listing page',
+  'Vendor Details page',
+  'Profile page',
+  'Customer Details page',
+  'User Management page',
+  'Forecast Listing Page',
+  'Product Details page - Header',
+  'Product Details page - Purchase History',
+  'Customer Listing page',
+  'Product Details page - Quote History',
+  'Product Details page - Sales History',
+  'Product details page - Pricing History Chart',
+  'Product details page - Excess Stock Alert',
+  'Product details page - Reorder Alert',
+  'Dashboard - Summary Cards (At top)',
+  'Dashboard - Inventory Health Status',
+  'Dashboard - Inventory by Category',
+  'Dashboard - Critical Stock Items Widget',
+  'Dashboard - Critical Stock Items Detailed Page',
+  'Dashboard - Fast Moving Items (Widget)',
+  'Dashboard - Fast Moving Items Detailed Page',
+  'Dashboard - Slow Moving Items Widget',
+  'Dashboard - Slow Moving Items Detailed Page',
+  'Dashboard - Top Quoted Items Widget',
+  'Dashboard - Top Quoted Items Detailed Page',
+  'Dashboard - Top Customers Widget',
+  'Dashboard - Top Customers Detailed Page',
+  'Dashboard - Top Vendors Widget',
+  'Dashboard - Top Vendors Detailed Page',
+  'Dashboard - Inventory Value Trend Graph',
+  'Dashboard - Demand vs Supply Graph',
+]
+
+const accessAndPermissionsDoc: DocBlock[] = [
+  { kind: 'h2', text: 'User Story' },
+  {
+    kind: 'p',
+    text: 'As a system user, I want my access and permissions to be determined by my assigned role, so that I can access only the features and actions appropriate to my responsibilities.',
+  },
+  { kind: 'h2', text: 'Entry Condition:' },
+  {
+    kind: 'bullets',
+    items: [
+      'User must be logged in with a valid Microsoft SSO account',
+      'User must have an assigned role (Super Admin, Admin, or Viewer)',
+      'User must not have "No Access" status',
+    ],
+  },
+  { kind: 'h2', text: 'Acceptance Criteria:' },
+  { kind: 'sub', text: 'Super Admin Role:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Has access to all system modules including User Management',
+      'Full access to: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor, User Management',
+      'Can view, search, filter, sort, and export data from all modules',
+      'Navigation menu displays all available modules',
+      'User Management menu item visible and accessible',
+    ],
+  },
+  { kind: 'sub', text: 'Admin Role:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Has access to all operational modules except User Management',
+      'Full access to: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor',
+      'User Management menu item NOT visible in navigation',
+      'Can view, search, filter, sort, and export data from all accessible modules',
+      'Cannot access User Management page',
+    ],
+  },
+  { kind: 'sub', text: 'Viewer Role:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Has read-only access to operational modules',
+      'User Management menu item NOT visible in navigation',
+      'Can view only: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor',
+      'Can search, filter, sort, and export data (read-only operations only)',
+      'No data modification capabilities',
+      'Cannot access User Management page',
+    ],
+  },
+  { kind: 'sub', text: 'No Access Status:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Cannot log in to the system',
+      'Listed in User Management but blocked from authentication',
+      'Receives error message when attempting to sign in',
+    ],
+  },
+  { kind: 'h2', text: 'Scenarios:' },
+  { kind: 'sub', text: 'Super Admin Access:' },
+  {
+    kind: 'numbered',
+    items: [
+      'Super Admin logs in via Microsoft SSO',
+      'System validates Super Admin role',
+      'Navigation menu displays all items: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor, User Management',
+      'Super Admin can access any module from navigation',
+      'Super Admin can view all data across all modules',
+      'Super Admin can search, filter, sort, and export data from any module',
+      'Super Admin can access User Management to manage other users',
+    ],
+  },
+  { kind: 'sub', text: 'Admin Access:' },
+  {
+    kind: 'numbered',
+    items: [
+      'Admin logs in via Microsoft SSO',
+      'System validates Admin role',
+      'Navigation menu displays: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor',
+      'User Management menu item not visible',
+      'Admin can access any visible module from navigation',
+      'Admin can view all data across accessible modules',
+      'Admin can search, filter, sort, and export data from any accessible module',
+      'If Admin attempts to access User Management URL directly, system denies access with error message',
+    ],
+  },
+  { kind: 'sub', text: 'Viewer Access:' },
+  {
+    kind: 'numbered',
+    items: [
+      'Viewer logs in via Microsoft SSO',
+      'System validates Viewer role',
+      'Navigation menu displays: Dashboard, Forecast, Inventory, Sales, Purchase, Quote, Customer, Vendor',
+      'User Management menu item not visible',
+      'Viewer can access any visible module from navigation',
+      'Viewer can only view, search, filter, sort, and export data',
+      'No data modification capabilities available',
+      'If Viewer attempts to access User Management URL directly, system denies access with error message',
+    ],
+  },
+  { kind: 'sub', text: 'No Access User Login Attempt:' },
+  {
+    kind: 'numbered',
+    items: [
+      'User with "No Access" status attempts to sign in',
+      'User completes Microsoft SSO authentication',
+      'System checks user role/status',
+      'System detects "No Access" status',
+      'Error message displayed: "You do not have access to this system. Please contact your administrator"',
+      'User redirected back to login page',
+      'User cannot access any part of the system',
+    ],
+  },
+  { kind: 'sub', text: 'Direct URL Access Attempt (Unauthorized):' },
+  {
+    kind: 'numbered',
+    items: [
+      'Admin or Viewer attempts to access restricted URL directly (e.g. typing User Management URL)',
+      'System validates role permissions for the requested route',
+      'Access denied message displayed',
+      'User remains on their current page',
+    ],
+  },
+  { kind: 'h2', text: 'Unhappy Path:' },
+  {
+    kind: 'bullets',
+    items: [
+      'No Access login attempt → Display: "You do not have access to this system. Please contact your administrator" and redirect to login',
+      'Viewer attempts User Management access → Display: "Access Denied. You do not have permission to access this page"',
+      'Admin attempts User Management access → Display: "Access Denied. You do not have permission to access this page"',
+      'Direct URL access to restricted page → System blocks access and shows: "Access Denied. You do not have permission to access this page"',
+      'Session expired during restricted access attempt → Redirect to login page',
+      'Role changed during active session → Force logout and require re-authentication',
+    ],
+  },
+  { kind: 'h2', text: 'Validations:' },
+  {
+    kind: 'bullets',
+    items: [
+      'User must have valid role assigned (Super Admin, Admin, Viewer)',
+      'Navigation menu dynamically generated based on role',
+      'Direct URL access to restricted pages blocked with authorization checks',
+      'Role validation occurs on every page load and action',
+      '"No Access" users cannot authenticate past login screen',
+      'All API calls validate user permissions server-side',
+    ],
+  },
+  { kind: 'h2', text: 'Messages:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Access Denied (Page): "Access Denied. You do not have permission to access this page"',
+      'No Access Status: "You do not have access to this system. Please contact your administrator"',
+      'Session Expired: "Your session has expired. Please log in again"',
+      'Role Changed: "Your access level has changed. Please log in again"',
+    ],
+  },
+  { kind: 'h2', text: 'Additional Notes:' },
+  {
+    kind: 'bullets',
+    items: [
+      'All data sourced from Eniteo ERP integration (consistent across all roles)',
+      "Navigation menu dynamically rendered based on user's assigned role",
+      'Server-side validation enforces permissions for all actions',
+      'Role changes require user to logout and login to take effect',
+      'Export functionality available to all roles for accessible modules',
+      'Search, filter, and sort functionality available to all roles',
+    ],
+  },
+  { kind: 'h2', text: 'Impact Places:' },
+  {
+    kind: 'bullets',
+    items: [
+      'Navigation Menu (User Management visibility based on role)',
+      'User Management Page (visible to Super Admin only)',
+      'All viewing modules (accessible based on role with consistent view/export capabilities)',
+      'Authentication flow (validates role and permissions)',
+      'All page routes (authorization checks)',
+    ],
+  },
+]
+
+const inventoryHealthDoc: DocBlock[] = [
+  { kind: 'h2', text: 'User Story:' },
+  {
+    kind: 'p',
+    text: 'As a user, I want to view a donut chart visualization that displays the distribution of products across different inventory health statuses so that I can quickly identify stock issues and make informed decisions about inventory management.',
+  },
+  { kind: 'h2', text: 'Entry Condition:' },
+  { kind: 'bullets', items: ['User navigates to the inventory dashboard'] },
+]
+
+const SUBTASK_NAMES = [
+  'Dashboard Summary API',
+  'Pie-chart API : Inventory Health',
+  'Pie-chart API : Inventory by Category',
+  'Critical Stock Items API',
+  'Fast Moving API',
+  'Slow Moving API',
+  'Top Quoted Items',
+  'Line Graph : Inventory Value Trend API',
+  'Line Graph : Demand VS Supply API',
+  'Top Vendors API',
+]
+
+function buildBacklog(): Task[] {
+  const out: Task[] = []
+
+  // HOLD FOR INFORMATION (1)
+  out.push(
+    task('backlog', 'holdForInfo', 'Access and Permissions', {
+      tags: ['spt'],
+      hasDescription: true,
+      assigneeIds: ['lydia'],
+      estimateHours: 22,
+      codeId: '#86d1gzq48',
+      createdLabel: 'Jan 8',
+      description: accessAndPermissionsDoc,
+      loadDelayed: true,
+      activity: [
+        {
+          kind: 'event',
+          id: 'a1',
+          text: 'Lydia Rubavathy (deactivated) created this task by copying',
+          link: '#86d11156x - Access and Permissions',
+          timeLabel: 'Jan 8 at 5:49 pm',
+        },
+        {
+          kind: 'event',
+          id: 'a2',
+          text: 'Lydia Rubavathy (deactivated) set time estimate to 22h',
+          timeLabel: 'Jan 8 at 5:52 pm',
+          hidden: true,
+        },
+        {
+          kind: 'event',
+          id: 'a3',
+          text: 'Lydia Rubavathy (deactivated) added tag spt',
+          timeLabel: 'Jan 8 at 6:01 pm',
+          hidden: true,
+        },
+        {
+          kind: 'event',
+          id: 'a4',
+          text: 'Lydia Rubavathy (deactivated) added follower: Lydia Rubavathy (deactivated)',
+          timeLabel: 'Jan 8 at 6:47 pm',
+        },
+      ],
+    }),
+  )
+
+  // READY FOR DEV (40)
+  for (const name of READY_FOR_DEV_NAMES) {
+    out.push(
+      task('backlog', 'readyForDev', name, {
+        tags: ['spt'],
+        hasDescription: true,
+        description:
+          name === 'Product Details page - Purchase History'
+            ? [
+                { kind: 'h2', text: 'Entry Condition:' },
+                {
+                  kind: 'bullets',
+                  items: [
+                    'User must be logged in with valid role permissions',
+                    'User navigates to the Product Details page',
+                    'User selects the "Purchase History" tab',
+                    'Purchase data synced from Eniteo ERP',
+                  ],
+                },
+              ]
+            : entryConditionDoc(name),
+      }),
+    )
+  }
+
+  // BA IN PROGRESS (4)
+  const invHealth = task('backlog', 'baInProgress', 'Dashboard - Inventory Health Status', {
+    tags: ['msm', 'pending'],
+    hasDescription: true,
+    assigneeIds: ['lydia'],
+    subtaskCount: 10,
+    codeId: '#86d10x5jx',
+    createdLabel: 'Nov 20 2025',
+    description: inventoryHealthDoc,
+    loadDelayed: true,
+    activity: [
+      {
+        kind: 'event',
+        id: 'b1',
+        text: 'Lydia Rubavathy (deactivated) created this task',
+        timeLabel: 'Nov 20 2025 at 9:28 am',
+      },
+      {
+        kind: 'event',
+        id: 'b2',
+        text: 'Lydia Rubavathy (deactivated) added subtask: Dashboard Summary API',
+        timeLabel: 'Nov 21 2025 at 10:02 am',
+        hidden: true,
+      },
+      {
+        kind: 'comment',
+        id: 'b3',
+        userId: 'lydia',
+        timeLabel: 'Dec 9 2025 at 3:00 pm',
+        body: 'Statuses are yet to be defined @Lydia Rubavathy',
+      },
+      {
+        kind: 'event',
+        id: 'b4',
+        text: 'Lydia Rubavathy (deactivated) added tag msm',
+        timeLabel: 'Jan 9 at 5:27 pm',
+      },
+    ],
+  })
+  out.push(invHealth)
+  out.push(
+    task('backlog', 'baInProgress', 'Integration with Eniteo ERP', {
+      tags: ['spt'],
+      hasDescription: true,
+      description: entryConditionDoc('Eniteo ERP integration settings'),
+    }),
+    task('backlog', 'baInProgress', 'Product Details page - Stock Status Overview and Location Distribution', {
+      tags: ['spt'],
+      hasDescription: true,
+      description: entryConditionDoc('Product Details page'),
+    }),
+    task('backlog', 'baInProgress', 'Product details page - Inventory Forecast Trend Chart', {
+      tags: ['spt'],
+      hasDescription: true,
+      assigneeIds: ['lydia'],
+      description: entryConditionDoc('Product Details page'),
+    }),
+  )
+
+  // Subtasks of Dashboard - Inventory Health Status
+  for (const name of SUBTASK_NAMES) {
+    out.push(task('backlog', 'toDo', name, { parentId: invHealth.id }))
+  }
+
+  // TO DO (2) — never expanded on screen in the recording
+  out.push(
+    task('backlog', 'toDo', 'Reports - Export to Excel', { tags: ['spt'] }),
+    task('backlog', 'toDo', 'Notification Center', { tags: ['spt'] }),
+  )
+
+  return out
+}
+
 export const tasks: Task[] = [
-  // Sprint 4 (2/2 - 22/2) — transcribed from the reference screenshot
+  ...buildBacklog(),
+
+  // Sprint 4 (2/2 - 22/2) — from the earlier reference screenshot
   task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items (Widget)', {
     subtaskCount: 2, hasDescription: true, estimateHours: 6,
   }),
@@ -135,34 +591,32 @@ export const tasks: Task[] = [
     subtaskCount: 1, estimateHours: 12,
   }),
 
-  // Earlier sprints — representative content so navigation feels real
-  task('sprint1', 'complete', 'Login & Authentication Flow', {
-    subtaskCount: 4, hasDescription: true, assigneeId: 'abdulRahuman', estimateHours: 16,
+  // Earlier sprints
+  task('sprint1', 'movedToProduction', 'Login & Authentication Flow', {
+    subtaskCount: 4, hasDescription: true, assigneeIds: ['abdulRahuman'], estimateHours: 16,
   }),
-  task('sprint2', 'complete', 'Inventory Sync Service', {
-    subtaskCount: 3, hasDescription: true, assigneeId: 'abirami', estimateHours: 24,
+  task('sprint2', 'movedToProduction', 'Inventory Sync Service', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['abirami'], estimateHours: 24,
   }),
-  task('sprint2', 'complete', 'Warehouse Master Data Screens', {
-    subtaskCount: 2, assigneeId: 'abdullah', estimateHours: 12,
+  task('sprint2', 'movedToProduction', 'Warehouse Master Data Screens', {
+    subtaskCount: 2, assigneeIds: ['abdullah'], estimateHours: 12,
   }),
-  task('sprint2', 'inProgress', 'Purchase Order Import', {
-    subtaskCount: 2, hasDescription: true, assigneeId: 'abinaya', estimateHours: 10,
+  task('sprint2', 'devInProgress', 'Purchase Order Import', {
+    subtaskCount: 2, hasDescription: true, assigneeIds: ['abinaya'], estimateHours: 10,
   }),
   task('sprint2', 'toDo', 'Email Notification Templates', { estimateHours: 6 }),
-  task('sprint3', 'complete', 'Dashboard - Stock Ageing Widget', {
-    subtaskCount: 2, hasDescription: true, assigneeId: 'anamul', estimateHours: 8,
+  task('sprint3', 'movedToProduction', 'Dashboard - Stock Ageing Widget', {
+    subtaskCount: 2, hasDescription: true, assigneeIds: ['anamul'], estimateHours: 8,
   }),
-  task('sprint3', 'inProgress', 'Dashboard - Slow Moving Items', {
-    subtaskCount: 3, hasDescription: true, assigneeId: 'abirami', dueDate: '1/28/26', estimateHours: 14,
+  task('sprint3', 'devInProgress', 'Dashboard - Slow Moving Items', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['abirami'], dueDate: '1/28/26', estimateHours: 14,
   }),
   task('sprint3', 'toDo', 'Ask AI - Email Knowledge Source', {
     subtaskCount: 1, estimateHours: 12,
   }),
-  task('list1', 'toDo', 'MSM go-live checklist', { hasDescription: true, estimateHours: 4 }),
-  task('backlog', 'toDo', 'Multi-currency support', { estimateHours: 24 }),
-  task('backlog', 'toDo', 'Role-based access control', { subtaskCount: 5, estimateHours: 32 }),
-  task('backlog', 'toDo', 'Audit log viewer', { estimateHours: 12 }),
-  task('backlog', 'toDo', 'Bulk CSV export', { estimateHours: 8 }),
+
+  // "List" under MSM — matches the video: QA COMPLETE (1) / TO DO (0)
+  task('list1', 'qaComplete', 'MSM go-live checklist', { hasDescription: true, estimateHours: 4 }),
 ]
 
 const base = { read: false, cleared: false, later: false } as const
@@ -283,7 +737,6 @@ export const notifications: AppNotification[] = [
     timeLabel: 'Jan 20',
     ...base,
   },
-  // ---- "Other" tab (7 unread) ----
   {
     id: 'o1',
     tab: 'other',

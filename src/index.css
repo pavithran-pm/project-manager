@@ -83,10 +83,29 @@ a {
   animation: pm-rise-in 0.18s ease-out;
 }
 
+/* Loading skeleton bars with a moving shimmer highlight */
+@keyframes pm-shimmer-move {
+  from {
+    background-position: -200px 0;
+  }
+  to {
+    background-position: 200px 0;
+  }
+}
+.pm-shimmer {
+  background-color: #ececf1;
+  background-image: linear-gradient(90deg, #ececf1 0%, #f7f7fa 50%, #ececf1 100%);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  border-radius: 6px;
+  animation: pm-shimmer-move 1.1s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-pop-in,
-  .animate-rise-in {
+  .animate-rise-in,
+  .pm-shimmer {
     animation: none;
   }
   button,

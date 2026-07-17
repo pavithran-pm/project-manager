@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  ActivityEntry,
   AppNotification,
   Channel,
+  Checklist,
   DocItem,
   FolderItem,
   Space,
@@ -12,10 +14,12 @@ import type {
   TaskPriority,
   TaskStatus,
   User,
+  WorkspaceTag,
 } from './types'
 import {
   channels as seedChannels,
   currentUserId,
+  defaultGroupCollapse,
   dmUserIds,
   docs as seedDocs,
   notifications as seedNotifications,
@@ -25,6 +29,7 @@ import {
   tasks as seedTasks,
   users as seedUsers,
   WORKSPACE_NAME,
+  workspaceTags as seedTags,
 } from './seed'
 
 export interface Toast {
@@ -42,6 +47,7 @@ interface AppState {
   docs: DocItem[]
   tasks: Task[]
   taskStatuses: Record<string, TaskStatus>
+  workspaceTags: Record<string, WorkspaceTag>
   notifications: AppNotification[]
   activeTab: TabId
   bannerDismissed: boolean
@@ -50,6 +56,10 @@ interface AppState {
   inboxUnreadOnly: boolean
   favorites: string[]
   toasts: Toast[]
+  /** listId → collapsed statusIds */
+  groupCollapse: Record<string, string[]>
+  /** Task open in the global task modal */
+  selectedTaskId: string | null
 
   setActiveTab: (tab: TabId) => void
   dismissBanner: () => void
@@ -68,13 +78,24 @@ interface AppState {
   toggleFavorite: (id: string) => void
   notify: (message: string) => void
   dismissToast: (id: number) => void
+  toggleGroup: (listId: string, statusId: string) => void
+  openTask: (taskId: string) => void
+  closeTask: () => void
 
   setTaskStatus: (taskId: string, statusId: string) => void
-  setTaskAssignee: (taskId: string, userId: string | undefined) => void
+  toggleTaskAssignee: (taskId: string, userId: string) => void
+  clearTaskAssignees: (taskId: string) => void
   setTaskDueDate: (taskId: string, isoDate: string | undefined) => void
   setTaskPriority: (taskId: string, priority: TaskPriority | undefined) => void
   setTaskEstimate: (taskId: string, hours: number | undefined) => void
+  setTaskTags: (taskId: string, tags: string[]) => void
   addTask: (listId: string, statusId: string, name: string) => void
+  addSubtask: (parentId: string, name: string) => void
+  addChecklist: (taskId: string) => void
+  renameChecklist: (taskId: string, checklistId: string, title: string) => void
+  addChecklistItem: (taskId: string, checklistId: string, text: string) => void
+  toggleChecklistItem: (taskId: string, checklistId: string, itemId: string) => void
+  addComment: (taskId: string, body: string) => void
 }
 
 const SPACE_COLORS = ['#2ea44f', '#e8871e', '#d6336c', '#4194f6', '#0f7f70', '#7b68ee']
@@ -86,6 +107,7 @@ const partializeState = (s: AppState) => ({
   favorites: s.favorites,
   bannerDismissed: s.bannerDismissed,
   inboxUnreadOnly: s.inboxUnreadOnly,
+  groupCollapse: s.groupCollapse,
 })
 type PersistedState = ReturnType<typeof partializeState>
 
@@ -109,6 +131,7 @@ export const useAppStore = create<AppState>()(
       docs: seedDocs,
       tasks: seedTasks,
       taskStatuses: seedStatuses,
+      workspaceTags: seedTags,
       notifications: seedNotifications,
       activeTab: 'primary',
       bannerDismissed: false,
@@ -117,6 +140,8 @@ export const useAppStore = create<AppState>()(
       inboxUnreadOnly: false,
       favorites: [],
       toasts: [],
+      groupCollapse: defaultGroupCollapse,
+      selectedTaskId: null,
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       dismissBanner: () => set({ bannerDismissed: true }),
@@ -167,10 +192,7 @@ export const useAppStore = create<AppState>()(
             sp.id === spaceId
               ? {
                   ...sp,
-                  items: [
-                    ...sp.items,
-                    { id: freshId('list'), name: 'List', icon: 'list' as const },
-                  ],
+                  items: [...sp.items, { id: freshId('list'), name: 'List', icon: 'list' as const }],
                 }
               : sp,
           ),
@@ -185,9 +207,7 @@ export const useAppStore = create<AppState>()(
                 : {
                     id: freshId('sprints'),
                     name: 'Sprints',
-                    items: [
-                      { id: freshId('sprint'), name: 'Sprint 1', icon: 'sprint' as const },
-                    ],
+                    items: [{ id: freshId('sprint'), name: 'Sprint 1', icon: 'sprint' as const }],
                   }
             return { ...sp, folders: [...sp.folders, folder] }
           }),
@@ -225,14 +245,40 @@ export const useAppStore = create<AppState>()(
             ? s.favorites.filter((f) => f !== id)
             : [...s.favorites, id],
         })),
-      notify: (message) =>
-        set((s) => ({ toasts: [...s.toasts, { id: ++toastSeq, message }] })),
+      notify: (message) => set((s) => ({ toasts: [...s.toasts, { id: ++toastSeq, message }] })),
       dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+      toggleGroup: (listId, statusId) =>
+        set((s) => {
+          const cur = s.groupCollapse[listId] ?? []
+          return {
+            groupCollapse: {
+              ...s.groupCollapse,
+              [listId]: cur.includes(statusId)
+                ? cur.filter((x) => x !== statusId)
+                : [...cur, statusId],
+            },
+          }
+        }),
+      openTask: (taskId) => set({ selectedTaskId: taskId }),
+      closeTask: () => set({ selectedTaskId: null }),
 
       setTaskStatus: (taskId, statusId) =>
         set((s) => ({ tasks: patchTask(s.tasks, taskId, { statusId }) })),
-      setTaskAssignee: (taskId, userId) =>
-        set((s) => ({ tasks: patchTask(s.tasks, taskId, { assigneeId: userId }) })),
+      toggleTaskAssignee: (taskId, userId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) => {
+            if (t.id !== taskId) return t
+            const cur = t.assigneeIds ?? []
+            return {
+              ...t,
+              assigneeIds: cur.includes(userId)
+                ? cur.filter((u) => u !== userId)
+                : [...cur, userId],
+            }
+          }),
+        })),
+      clearTaskAssignees: (taskId) =>
+        set((s) => ({ tasks: patchTask(s.tasks, taskId, { assigneeIds: [] }) })),
       setTaskDueDate: (taskId, isoDate) =>
         set((s) => ({
           tasks: patchTask(
@@ -247,6 +293,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ tasks: patchTask(s.tasks, taskId, { priority }) })),
       setTaskEstimate: (taskId, hours) =>
         set((s) => ({ tasks: patchTask(s.tasks, taskId, { estimateHours: hours }) })),
+      setTaskTags: (taskId, tags) => set((s) => ({ tasks: patchTask(s.tasks, taskId, { tags }) })),
       addTask: (listId, statusId, name) =>
         set((s) => {
           const trimmed = name.trim()
@@ -255,14 +302,115 @@ export const useAppStore = create<AppState>()(
             tasks: [...s.tasks, { id: freshId('task'), listId, statusId, name: trimmed }],
           }
         }),
+      addSubtask: (parentId, name) =>
+        set((s) => {
+          const parent = s.tasks.find((t) => t.id === parentId)
+          const trimmed = name.trim()
+          if (!parent || !trimmed) return s
+          return {
+            tasks: [
+              ...s.tasks.map((t) =>
+                t.id === parentId ? { ...t, subtaskCount: (t.subtaskCount ?? 0) + 1 } : t,
+              ),
+              {
+                id: freshId('task'),
+                listId: parent.listId,
+                statusId: 'toDo',
+                name: trimmed,
+                parentId,
+              },
+            ],
+          }
+        }),
+      addChecklist: (taskId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklists: [
+                    ...(t.checklists ?? []),
+                    { id: freshId('cl'), title: 'Checklist', items: [] } as Checklist,
+                  ],
+                }
+              : t,
+          ),
+        })),
+      renameChecklist: (taskId, checklistId, title) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklists: (t.checklists ?? []).map((c) =>
+                    c.id === checklistId ? { ...c, title: title.trim() || c.title } : c,
+                  ),
+                }
+              : t,
+          ),
+        })),
+      addChecklistItem: (taskId, checklistId, text) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklists: (t.checklists ?? []).map((c) =>
+                    c.id === checklistId && text.trim()
+                      ? {
+                          ...c,
+                          items: [...c.items, { id: freshId('cli'), text: text.trim(), done: false }],
+                        }
+                      : c,
+                  ),
+                }
+              : t,
+          ),
+        })),
+      toggleChecklistItem: (taskId, checklistId, itemId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklists: (t.checklists ?? []).map((c) =>
+                    c.id === checklistId
+                      ? {
+                          ...c,
+                          items: c.items.map((i) =>
+                            i.id === itemId ? { ...i, done: !i.done } : i,
+                          ),
+                        }
+                      : c,
+                  ),
+                }
+              : t,
+          ),
+        })),
+      addComment: (taskId, body) =>
+        set((s) => {
+          const trimmed = body.trim()
+          if (!trimmed) return s
+          const entry: ActivityEntry = {
+            kind: 'comment',
+            id: freshId('cm'),
+            userId: s.currentUserId,
+            timeLabel: 'Just now',
+            body: trimmed,
+          }
+          return {
+            tasks: s.tasks.map((t) =>
+              t.id === taskId ? { ...t, activity: [...(t.activity ?? []), entry] } : t,
+            ),
+          }
+        }),
     }),
     {
       name: 'pm-tracker-store',
-      version: 1,
+      version: 2,
       partialize: partializeState,
       // Older persisted shapes are discarded so new seed data ships cleanly.
-      migrate: (persisted, version) =>
-        (version === 1 ? persisted : {}) as PersistedState,
+      migrate: (persisted, version) => (version === 2 ? persisted : {}) as PersistedState,
     },
   ),
 )
@@ -295,8 +443,13 @@ export function groupNotifications(list: AppNotification[]) {
 
 // ---- Task selectors & helpers ----
 
+/** Top-level (non-subtask) tasks for the given lists. */
 export function tasksForLists(tasks: Task[], listIds: string[]) {
-  return tasks.filter((t) => listIds.includes(t.listId))
+  return tasks.filter((t) => listIds.includes(t.listId) && !t.parentId)
+}
+
+export function subtasksOf(tasks: Task[], parentId: string) {
+  return tasks.filter((t) => t.parentId === parentId)
 }
 
 /** Group tasks by status, ordered by the canonical statusOrder; empty groups omitted. */
@@ -310,12 +463,15 @@ export function groupTasksByStatus(tasks: Task[], statuses: Record<string, TaskS
 }
 
 /** Rollup numbers for a list view's summary cards and banner. */
-export function listStats(tasks: Task[]) {
+export function listStats(tasks: Task[], statuses: Record<string, TaskStatus>) {
+  const finished = (t: Task) => {
+    const g = statuses[t.statusId]?.group
+    return g === 'done' || g === 'closed'
+  }
   return {
     total: tasks.length,
-    unfinished: tasks.filter((t) => t.statusId !== 'complete' && t.statusId !== 'devCompleted')
-      .length,
-    missingAssignee: tasks.filter((t) => !t.assigneeId).length,
+    unfinished: tasks.filter((t) => !finished(t)).length,
+    missingAssignee: tasks.filter((t) => !t.assigneeIds?.length).length,
     missingEffort: tasks.filter((t) => t.estimateHours === undefined).length,
   }
 }

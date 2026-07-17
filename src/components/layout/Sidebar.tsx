@@ -93,10 +93,9 @@ function WhiteboardIcon() {
 function FolderItemRow({ spaceId, item }: { spaceId: string; item: FolderItem }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const notify = useAppStore((s) => s.notify)
-  const navigable = item.icon === 'sprint' || item.icon === 'list'
-  const route = `/space/${spaceId}/list/${item.id}`
-  const active = navigable && (pathname === route || pathname.startsWith(`${route}/`))
+  const route =
+    item.icon === 'whiteboard' ? `/whiteboard/${item.id}` : `/space/${spaceId}/list/${item.id}`
+  const active = pathname === route || pathname.startsWith(`${route}/`)
 
   const icon =
     item.icon === 'sprint' ? (
@@ -108,12 +107,7 @@ function FolderItemRow({ spaceId, item }: { spaceId: string; item: FolderItem })
     )
 
   return (
-    <Row
-      active={active}
-      onClick={
-        navigable ? () => navigate(route) : () => comingSoon(notify, 'The Whiteboard view')
-      }
-    >
+    <Row active={active} onClick={() => navigate(route)}>
       {icon}
       <span className="truncate">{item.name}</span>
       {item.count !== undefined && (

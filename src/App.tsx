@@ -8,6 +8,8 @@ import { InboxPage } from './features/inbox/InboxPage'
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
 import { FolderPage } from './features/space/FolderPage'
 import { ListPage } from './features/space/ListPage'
+import { TaskModal } from './features/task/TaskModal'
+import { WhiteboardPage } from './features/whiteboard/WhiteboardPage'
 
 // Hash routing lets the single-file build (artifact / static hosting) deep-link
 // without a history-fallback server; the dev/production server keeps clean URLs.
@@ -49,6 +51,15 @@ export default function App() {
                 </>
               }
             />
+            <Route
+              path="/whiteboard/:itemId"
+              element={
+                <>
+                  <Sidebar />
+                  <WhiteboardPage />
+                </>
+              }
+            />
             <Route path="/planner" element={<PlaceholderPage title="Planner" />} />
             <Route path="/ai" element={<PlaceholderPage title="AI" />} />
             <Route path="/teams" element={<PlaceholderPage title="Teams" />} />
@@ -58,6 +69,7 @@ export default function App() {
           </Routes>
         </div>
         <SearchModal />
+        <TaskModal />
         <ToastHost />
       </div>
     </Router>

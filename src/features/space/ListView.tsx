@@ -39,7 +39,7 @@ export function ListView({ listIds }: { listIds: string[] }) {
 
   const tasks = tasksForLists(allTasks, listIds)
   const groups = groupTasksByStatus(tasks, taskStatuses)
-  const stats = listStats(tasks)
+  const stats = listStats(tasks, taskStatuses)
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const toggleGroup = (statusId: string) =>
@@ -221,7 +221,7 @@ function StatusGroup({
               task={task}
               status={status}
               users={users}
-              user={task.assigneeId ? users[task.assigneeId] : undefined}
+              user={task.assigneeIds?.[0] ? users[task.assigneeIds[0]] : undefined}
             />
           ))}
 
@@ -292,7 +292,8 @@ function TaskRow({
   const notify = useAppStore((s) => s.notify)
   const taskStatuses = useAppStore((s) => s.taskStatuses)
   const setTaskStatus = useAppStore((s) => s.setTaskStatus)
-  const setTaskAssignee = useAppStore((s) => s.setTaskAssignee)
+  const toggleTaskAssignee = useAppStore((s) => s.toggleTaskAssignee)
+  const clearTaskAssignees = useAppStore((s) => s.clearTaskAssignees)
   const setTaskDueDate = useAppStore((s) => s.setTaskDueDate)
   const setTaskPriority = useAppStore((s) => s.setTaskPriority)
   const setTaskEstimate = useAppStore((s) => s.setTaskEstimate)
@@ -462,21 +463,23 @@ function TaskRow({
             .map((u) => (
               <PopoverItem
                 key={u.id}
-                selected={u.id === task.assigneeId}
+                selected={task.assigneeIds?.includes(u.id)}
                 onClick={() => {
-                  setTaskAssignee(task.id, u.id === task.assigneeId ? undefined : u.id)
+                  toggleTaskAssignee(task.id, u.id)
                   close()
                 }}
               >
                 <Avatar initials={u.initials} color={u.color} size={20} />
                 <span className="truncate">{u.name}</span>
-                {u.id === task.assigneeId && <Check className="ml-auto h-3.5 w-3.5 text-brand" />}
+                {task.assigneeIds?.includes(u.id) && (
+                  <Check className="ml-auto h-3.5 w-3.5 text-brand" />
+                )}
               </PopoverItem>
             ))}
-          {task.assigneeId && (
+          {!!task.assigneeIds?.length && (
             <PopoverItem
               onClick={() => {
-                setTaskAssignee(task.id, undefined)
+                clearTaskAssignees(task.id)
                 close()
               }}
             >
