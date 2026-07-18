@@ -22,13 +22,19 @@ npm run build    # typecheck + production build
 
 | Screen | Status | Notes |
 | --- | --- | --- |
-| Home / Inbox | ✅ Built | Tabs (Primary/Other/Later/Cleared), clear/later/mark-read actions, live unread badges, sidebar with Spaces → Folder → Sprints tree |
-| Folder Overview | ✅ Built | Breadcrumb + view tabs, Recent/Docs/Bookmarks/Resources/Burndown cards |
-| Sprint List view | ✅ Built | Status groups (colored pills), summary cards, subtask chips, overdue dates, estimates, collapse |
-| Create a Space | ✅ Built | Modal with live letter preview — actually adds the space |
-| Create menu | ✅ Built | List/Folder/Sprint Folder/Doc/… popover — "List" actually adds one |
-| Board / Timeline / Workload / Table / Sprint Reporting | 🔜 Placeholder | share a screenshot to build next |
+| Home / Inbox | ✅ Built | Tabs, clear/later/mark-read, live unread badges |
+| Backlog list (from video) | ✅ Built | 47 seeded tasks, 19-status registry, group expand skeletons, sticky headers, tag chips, subtask rows, row context menu + 7 flyouts, description hover preview |
+| Task detail modal (from video) | ✅ Built | Fields grid + status/date/assignee/tag/time-track popovers, rich description with Expand/full-page view, subtask composer + table, checklists, attach/relationship menus, Activity feed + comments, loading skeletons, Esc/close tooltips |
+| Whiteboard | ✅ Built | Dot grid, tool bar, zoom, working sticky notes |
+| Folder Overview | ✅ Built | Cards, skeleton loads, navigation |
+| Sprint List view | ✅ Built | Summary cards, estimates, all cell popovers |
+| Create a Space / Create menu | ✅ Built | Really create spaces/lists/folders/sprints |
+| Board / Timeline / Workload / Table / Sprint Reporting | 🔜 Placeholder | share a recording to build next |
 | Planner / AI / Teams / Dashboards | 🔜 Placeholder | |
+
+The 4-minute reference recording is transcribed frame-by-frame in
+`docs/video-digest-*.md`; `docs/video-spec-3.md` is the build spec derived
+from it (colors sampled from the actual video pixels).
 
 ## Structure
 

@@ -1,6 +1,7 @@
 import { Navigate, useParams } from 'react-router-dom'
 import { findListItem, useAppStore } from '../../lib/store'
 import type { SpaceView } from '../../lib/types'
+import { PromoBanner } from '../inbox/PromoBanner'
 import { ComingSoonPanel } from './ComingSoonPanel'
 import { ListView } from './ListView'
 import { SpaceHeader } from './SpaceHeader'
@@ -16,6 +17,7 @@ export function ListPage() {
 
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-white">
+      <PromoBanner />
       <SpaceHeader spaceId={spaceId} listId={listId} activeView={activeView} />
       {activeView === 'list' ? (
         <ListView listIds={[listId]} />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import {
   AlignLeft,
@@ -9,11 +9,14 @@ import {
   Circle,
   CircleCheck,
   CircleUserRound,
+  Clock,
   Ellipsis,
   Flag,
   Hourglass,
   Network,
+  Pencil,
   Plus,
+  Tag,
   UserRound,
   X,
 } from 'lucide-react'
@@ -25,74 +28,209 @@ import {
   groupTasksByStatus,
   listStats,
   PRIORITY_META,
+  subtasksOf,
   tasksForLists,
   useAppStore,
 } from '../../lib/store'
-import { statusOrder } from '../../lib/seed'
-import type { Task, TaskPriority, TaskStatus, User } from '../../lib/types'
+import type { Task, TaskPriority, TaskStatus, User, WorkspaceTag } from '../../lib/types'
+import { AssigneePicker, DatePickerPopover, StatusDropdown } from '../task/TaskFieldPopovers'
+import { ListToolbar } from './ListToolbar'
+import { TaskRowMenu } from './TaskRowMenu'
+
+/* ---------------- Group status pill ---------------- */
+
+function statusGlyph(status: TaskStatus) {
+  if (status.group === 'done' || status.group === 'closed')
+    return <Check className="h-3 w-3 text-white" />
+  if (status.style === 'outline')
+    return <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-dashed border-current" />
+  return <Clock className="h-3 w-3 text-white" />
+}
+
+function StatusPill({ status }: { status: TaskStatus }) {
+  const outline = status.style === 'outline'
+  return (
+    <span
+      className={`flex h-[22px] items-center gap-1.5 rounded-[4px] px-2 text-[11px] font-bold tracking-wide whitespace-nowrap uppercase ${
+        outline ? 'border border-line-strong bg-white text-ink-soft' : 'text-white'
+      }`}
+      style={outline ? undefined : { backgroundColor: status.color }}
+    >
+      {statusGlyph(status)}
+      {status.label}
+    </span>
+  )
+}
+
+/** Row status icon: clock in the status color (dashed ring for TO DO-style). */
+function RowStatusIcon({ status }: { status: TaskStatus }) {
+  if (status.style === 'outline') {
+    return (
+      <span
+        className="h-[15px] w-[15px] shrink-0 rounded-full border-[1.5px] border-dashed"
+        style={{ borderColor: status.color }}
+      />
+    )
+  }
+  return <Clock className="h-[15px] w-[15px] shrink-0" style={{ color: status.color }} />
+}
+
+function TagChip({ tag }: { tag: WorkspaceTag }) {
+  return (
+    <span
+      className="flex h-[18px] shrink-0 items-center rounded-full px-1.5 text-[11px] font-medium"
+      style={{ backgroundColor: tag.bg, color: tag.text }}
+    >
+      {tag.label}
+    </span>
+  )
+}
+
+/* ---------------- Description hover preview (video sec 182) ---------------- */
+
+function DescriptionPreview({ task, pos }: { task: Task; pos: PopoverPos }) {
+  const blocks = (task.description ?? []).slice(0, 2)
+  return (
+    <div
+      className="animate-pop-in pointer-events-none fixed z-[60] w-[420px] rounded-lg border border-line bg-white p-4 shadow-xl"
+      style={{
+        top: Math.max(8, Math.min(pos.top, window.innerHeight - 220)),
+        left: Math.max(8, Math.min(pos.left, window.innerWidth - 436)),
+      }}
+    >
+      {blocks.map((b, i) =>
+        b.kind === 'h2' || b.kind === 'sub' ? (
+          <div key={i} className="mb-1.5 text-[17px] font-bold text-ink">
+            {b.text}
+          </div>
+        ) : b.kind === 'p' ? (
+          <p key={i} className="text-[13px] leading-relaxed text-ink-soft">
+            {b.text}
+          </p>
+        ) : (
+          <ul key={i} className="flex list-disc flex-col gap-0.5 pl-5">
+            {b.items.slice(0, 5).map((item, j) => (
+              <li key={j} className="text-[13px] leading-relaxed text-ink-soft">
+                {item}
+              </li>
+            ))}
+          </ul>
+        ),
+      )}
+      <ChevronDown className="absolute right-2 bottom-1.5 h-3.5 w-3.5 text-ink-faint" />
+    </div>
+  )
+}
+
+/* ---------------- Priorities toast (video sec 84) ---------------- */
+
+function PrioritiesToast({ name, onClose }: { name: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 6000)
+    return () => clearTimeout(t)
+  }, [onClose])
+  return (
+    <div className="animate-rise-in fixed bottom-4 left-4 z-[70] w-[330px] rounded-xl border border-line bg-white p-3.5 shadow-xl">
+      <div className="text-[13.5px] text-ink">Add this task to {name}&apos;s priorities?</div>
+      <div className="mt-2.5 flex items-center justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="h-7 cursor-pointer rounded-md bg-panel px-2.5 text-[12.5px] text-ink-soft hover:bg-hover"
+        >
+          Don&apos;t ask again
+        </button>
+        <button
+          onClick={onClose}
+          className="h-7 cursor-pointer rounded-md bg-[#2b2f3a] px-2.5 text-[12.5px] font-medium text-white hover:bg-[#1f232c]"
+        >
+          Add to priorities
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- ListView ---------------- */
 
 export function ListView({ listIds }: { listIds: string[] }) {
   const allTasks = useAppStore((s) => s.tasks)
   const taskStatuses = useAppStore((s) => s.taskStatuses)
-  const users = useAppStore((s) => s.users)
-  const notify = useAppStore((s) => s.notify)
+  const groupCollapse = useAppStore((s) => s.groupCollapse)
+  const toggleGroup = useAppStore((s) => s.toggleGroup)
 
+  const listKey = listIds[0]
+  const collapsed = groupCollapse[listKey] ?? []
   const tasks = tasksForLists(allTasks, listIds)
   const groups = groupTasksByStatus(tasks, taskStatuses)
   const stats = listStats(tasks, taskStatuses)
+  const showCards = !['backlog', 'list1'].includes(listKey)
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
-  const toggleGroup = (statusId: string) =>
-    setCollapsed((c) => ({ ...c, [statusId]: !c[statusId] }))
+  const [viewDirty, setViewDirty] = useState(false)
+  const [loadingGroups, setLoadingGroups] = useState<Record<string, boolean>>({})
+  const [priorityToastFor, setPriorityToastFor] = useState<string | null>(null)
+
+  const onToggleGroup = (statusId: string) => {
+    const expanding = collapsed.includes(statusId)
+    toggleGroup(listKey, statusId)
+    setViewDirty(true)
+    if (expanding) {
+      setLoadingGroups((l) => ({ ...l, [statusId]: true }))
+      setTimeout(() => setLoadingGroups((l) => ({ ...l, [statusId]: false })), 700)
+    }
+  }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
-      {stats.unfinished > 0 && (
-        <div className="w-full bg-[#fdeef3] px-4 py-1.5 text-center text-[12.5px] text-ink">
-          This sprint has {stats.unfinished}{' '}
-          <button
-            className="cursor-pointer underline"
-            onClick={() => comingSoon(notify, 'The unfinished-tasks filter')}
-          >
-            unfinished tasks
-          </button>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ListToolbar saveViewVisible={viewDirty} />
+      <div className="relative flex-1 overflow-y-auto bg-white">
+        {showCards && stats.unfinished > 0 && (
+          <div className="w-full bg-[#fdeef3] px-4 py-1.5 text-center text-[12.5px] text-ink">
+            This sprint has {stats.unfinished} <span className="underline">unfinished tasks</span>
+          </div>
+        )}
+        {showCards && (
+          <div className="flex gap-4 px-6 pt-4 pb-2">
+            <SummaryCard
+              tileClass="bg-[#e7f6ec]"
+              icon={<CircleCheck className="h-[18px] w-[18px] text-[#27ae60]" />}
+              title="Backlog"
+              sub={`${stats.total} tasks added`}
+            />
+            <SummaryCard
+              tileClass="bg-[#fdf3e7]"
+              icon={<CircleUserRound className="h-[18px] w-[18px] text-[#e8871e]" />}
+              title="Assigned"
+              sub={`${stats.missingAssignee} tasks missing assignee`}
+            />
+            <SummaryCard
+              tileClass="bg-[#fdf3e7]"
+              icon={<Hourglass className="h-[18px] w-[18px] text-[#e8871e]" />}
+              title="Effort"
+              sub={`${stats.missingEffort} tasks missing effort`}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-5 px-6 pt-3 pb-12">
+          {groups.map(({ status, items }) => (
+            <StatusGroup
+              key={status.id}
+              status={status}
+              items={items}
+              allTasks={allTasks}
+              targetListId={listKey}
+              collapsed={collapsed.includes(status.id)}
+              loading={!!loadingGroups[status.id]}
+              showEstimate={showCards}
+              onToggle={() => onToggleGroup(status.id)}
+              onAssigned={(name) => setPriorityToastFor(name)}
+            />
+          ))}
         </div>
+      </div>
+      {priorityToastFor && (
+        <PrioritiesToast name={priorityToastFor} onClose={() => setPriorityToastFor(null)} />
       )}
-
-      <div className="flex gap-4 px-6 pt-4 pb-2">
-        <SummaryCard
-          tileClass="bg-[#e7f6ec]"
-          icon={<CircleCheck className="h-[18px] w-[18px] text-[#27ae60]" />}
-          title="Backlog"
-          sub={`${stats.total} tasks added`}
-        />
-        <SummaryCard
-          tileClass="bg-[#fdf3e7]"
-          icon={<CircleUserRound className="h-[18px] w-[18px] text-[#e8871e]" />}
-          title="Assigned"
-          sub={`${stats.missingAssignee} tasks missing assignee`}
-        />
-        <SummaryCard
-          tileClass="bg-[#fdf3e7]"
-          icon={<Hourglass className="h-[18px] w-[18px] text-[#e8871e]" />}
-          title="Effort"
-          sub={`${stats.missingEffort} tasks missing effort`}
-        />
-      </div>
-
-      <div className="flex flex-col gap-6 px-6 pt-4 pb-10">
-        {groups.map(({ status, items }) => (
-          <StatusGroup
-            key={status.id}
-            status={status}
-            items={items}
-            users={users}
-            targetListId={listIds[0]}
-            collapsed={!!collapsed[status.id]}
-            onToggle={() => toggleGroup(status.id)}
-          />
-        ))}
-      </div>
     </div>
   )
 }
@@ -123,20 +261,39 @@ function SummaryCard({
   )
 }
 
+/* ---------------- Status group ---------------- */
+
+function SkeletonRow() {
+  const widths = ['62%', '38%', '48%', '55%']
+  const w = widths[Math.floor(Math.random() * widths.length)]
+  return (
+    <div className="flex h-9 items-center gap-3 border-b border-line px-2">
+      <span className="pm-shimmer h-4 w-4 shrink-0 rounded-full" />
+      <span className="pm-shimmer h-3" style={{ width: w }} />
+    </div>
+  )
+}
+
 function StatusGroup({
   status,
   items,
-  users,
+  allTasks,
   targetListId,
   collapsed,
+  loading,
+  showEstimate,
   onToggle,
+  onAssigned,
 }: {
   status: TaskStatus
   items: Task[]
-  users: Record<string, User>
+  allTasks: Task[]
   targetListId: string
   collapsed: boolean
+  loading: boolean
+  showEstimate: boolean
   onToggle: () => void
+  onAssigned: (name: string) => void
 }) {
   const notify = useAppStore((s) => s.notify)
   const addTask = useAppStore((s) => s.addTask)
@@ -158,26 +315,23 @@ function StatusGroup({
 
   return (
     <section>
-      {/* Group header */}
-      <div className="group/header mb-1 flex items-center gap-2">
-        <button
-          onClick={onToggle}
-          title={collapsed ? 'Expand group' : 'Collapse group'}
-          className="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
-        >
-          <ChevronDown
-            className={`h-3.5 w-3.5 text-ink-faint transition-transform ${collapsed ? '-rotate-90' : ''}`}
-          />
-        </button>
-        <span
-          className="flex items-center gap-1.5 rounded-[5px] px-2 py-[3px]"
-          style={{ backgroundColor: status.color }}
-        >
-          <Circle className="h-2.5 w-2.5 fill-white/20 text-white" />
-          <span className="text-[11px] font-bold tracking-wide whitespace-nowrap text-white">
-            {status.label}
+      {/* Sticky group header */}
+      <div className="group/header sticky top-0 z-20 flex items-center gap-2 bg-white py-1">
+        <span className="group/chev relative flex">
+          <button
+            onClick={onToggle}
+            aria-label={collapsed ? 'Expand group' : 'Collapse group'}
+            className="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
+          >
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-ink-faint transition-transform ${collapsed ? '-rotate-90' : ''}`}
+            />
+          </button>
+          <span className="animate-fade-in pointer-events-none absolute -top-8 left-1/2 z-[70] hidden -translate-x-1/2 rounded-md bg-[#26262b] px-2 py-1 text-[12px] whitespace-nowrap text-white group-hover/chev:block">
+            {collapsed ? 'Expand group' : 'Collapse group'}
           </span>
         </span>
+        <StatusPill status={status} />
         <span className="text-[12.5px] text-ink-faint tabular-nums">{items.length}</span>
         <button
           title="Group settings"
@@ -197,13 +351,13 @@ function StatusGroup({
 
       {!collapsed && (
         <>
-          {/* Column headers */}
-          <div className="flex h-7 items-center border-b border-line px-2 text-[11.5px] text-ink-faint">
+          {/* Sticky column headers */}
+          <div className="sticky top-[34px] z-10 flex h-7 items-center border-b border-line bg-white px-2 text-[11.5px] text-ink-faint">
             <div className="flex-1">Name</div>
-            <div className="w-24 shrink-0">Assignee</div>
-            <div className="w-24 shrink-0">Due date</div>
+            <div className="w-28 shrink-0">Assignee</div>
+            <div className="w-28 shrink-0">Due date</div>
             <div className="w-24 shrink-0">Priority</div>
-            <div className="w-28 shrink-0">Time estimate</div>
+            {showEstimate && <div className="w-28 shrink-0">Time estimate</div>}
             <div className="flex w-8 shrink-0 items-center justify-center">
               <button
                 title="Add column"
@@ -215,22 +369,30 @@ function StatusGroup({
             </div>
           </div>
 
-          {items.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              status={status}
-              users={users}
-              user={task.assigneeIds?.[0] ? users[task.assigneeIds[0]] : undefined}
-            />
-          ))}
+          {loading ? (
+            <>
+              {items.slice(0, Math.max(1, Math.min(items.length, 4))).map((t) => (
+                <SkeletonRow key={t.id} />
+              ))}
+            </>
+          ) : (
+            items.map((task) => (
+              <TaskRowV2
+                key={task.id}
+                task={task}
+                status={status}
+                allTasks={allTasks}
+                showEstimate={showEstimate}
+                onAssigned={onAssigned}
+              />
+            ))
+          )}
 
           {adding ? (
             <div className="animate-fade-in flex h-9 items-center gap-2 border-b border-line px-2">
-              <span
-                className="ml-5 h-[13px] w-[13px] shrink-0 rounded-full border-[2.5px]"
-                style={{ borderColor: status.color }}
-              />
+              <span className="ml-6">
+                <RowStatusIcon status={status} />
+              </span>
               <input
                 autoFocus
                 value={draft}
@@ -271,236 +433,319 @@ function StatusGroup({
   )
 }
 
-type CellPopover =
+/* ---------------- Task row ---------------- */
+
+type RowPopover =
   | { kind: 'status'; pos: PopoverPos }
   | { kind: 'assignee'; pos: PopoverPos }
   | { kind: 'due'; pos: PopoverPos }
   | { kind: 'priority'; pos: PopoverPos }
   | { kind: 'estimate'; pos: PopoverPos }
+  | { kind: 'menu'; pos: PopoverPos }
 
-function TaskRow({
+function TaskRowV2({
   task,
   status,
-  users,
-  user,
+  allTasks,
+  showEstimate = false,
+  onAssigned,
+  isSubtask = false,
 }: {
   task: Task
   status: TaskStatus
-  users: Record<string, User>
-  user?: User
+  allTasks: Task[]
+  showEstimate?: boolean
+  onAssigned: (name: string) => void
+  isSubtask?: boolean
 }) {
-  const notify = useAppStore((s) => s.notify)
+  const users = useAppStore((s) => s.users)
+  const workspaceTags = useAppStore((s) => s.workspaceTags)
   const taskStatuses = useAppStore((s) => s.taskStatuses)
-  const setTaskStatus = useAppStore((s) => s.setTaskStatus)
-  const toggleTaskAssignee = useAppStore((s) => s.toggleTaskAssignee)
-  const clearTaskAssignees = useAppStore((s) => s.clearTaskAssignees)
-  const setTaskDueDate = useAppStore((s) => s.setTaskDueDate)
+  const notify = useAppStore((s) => s.notify)
+  const openTask = useAppStore((s) => s.openTask)
   const setTaskPriority = useAppStore((s) => s.setTaskPriority)
   const setTaskEstimate = useAppStore((s) => s.setTaskEstimate)
 
-  const [pop, setPop] = useState<CellPopover | null>(null)
-  const openPop = (kind: CellPopover['kind'], width = 240) => (e: MouseEvent<HTMLElement>) => {
-    e.stopPropagation()
-    setPop({ kind, pos: popoverPosFor(e.currentTarget as HTMLElement, width) })
-  }
-  const close = () => setPop(null)
+  const [pop, setPop] = useState<RowPopover | null>(null)
+  const [expandedSubs, setExpandedSubs] = useState(false)
+  const [preview, setPreview] = useState<PopoverPos | null>(null)
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const subtasks = task.parentId ? [] : subtasksOf(allTasks, task.id)
+  const hasSubs = subtasks.length > 0
+  const assignees = (task.assigneeIds ?? []).map((id) => users[id]).filter(Boolean) as User[]
   const priorityMeta = task.priority ? PRIORITY_META[task.priority] : undefined
+  const prevAssigneeIds = useRef(task.assigneeIds ?? [])
+  // Tracks "the row's assignee picker was just used" across the same-render
+  // close, so the priorities toast fires even though `pop` is already null.
+  const assignPickerActive = useRef(false)
+
+  // Fire the "Add to priorities?" toast when a NEW assignee is added from this row.
+  useEffect(() => {
+    const prev = prevAssigneeIds.current
+    const cur = task.assigneeIds ?? []
+    const added = cur.find((id) => !prev.includes(id))
+    if (added && assignPickerActive.current) {
+      const u = users[added]
+      if (u) onAssigned(u.name)
+      assignPickerActive.current = false
+      setPop(null)
+    }
+    prevAssigneeIds.current = cur
+  }, [task.assigneeIds, users, onAssigned])
+
+  const openPop =
+    (kind: RowPopover['kind'], width = 240) =>
+    (e: MouseEvent<HTMLElement>) => {
+      e.stopPropagation()
+      if (kind === 'assignee') assignPickerActive.current = true
+      setPop({ kind, pos: popoverPosFor(e.currentTarget as HTMLElement, width) } as RowPopover)
+    }
+  const close = () => {
+    setPop(null)
+    // Give the store-change effect one tick to consume the flag, then drop it.
+    setTimeout(() => {
+      assignPickerActive.current = false
+    }, 150)
+  }
+
+  const startPreview = (e: MouseEvent<HTMLElement>) => {
+    if (!task.description?.length) return
+    const el = e.currentTarget as HTMLElement
+    previewTimer.current = setTimeout(() => {
+      const r = el.getBoundingClientRect()
+      setPreview({ top: r.bottom + 6, left: r.left - 40 })
+    }, 350)
+  }
+  const stopPreview = () => {
+    if (previewTimer.current) clearTimeout(previewTimer.current)
+    setPreview(null)
+  }
 
   return (
-    <div className="group/row flex h-9 items-center border-b border-line px-2 text-[13.5px] transition-colors hover:bg-panel">
-      {/* Name */}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <ChevronRight className="h-3 w-3 shrink-0 text-ink-faint opacity-0 group-hover/row:opacity-100" />
-        <button
-          title="Change status"
-          onClick={openPop('status')}
-          className="flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-hover"
-        >
-          <span
-            className="h-[13px] w-[13px] rounded-full border-[2.5px]"
-            style={{ borderColor: status.color }}
-          />
-        </button>
-        <button
-          onClick={() => comingSoon(notify, 'The task detail view')}
-          className="cursor-pointer truncate text-left text-ink hover:text-brand-deep"
-        >
-          {task.name}
-        </button>
-        {task.subtaskCount ? (
-          <button
-            onClick={() => comingSoon(notify, 'The subtasks panel')}
-            className="flex shrink-0 cursor-pointer items-center gap-0.5 rounded border border-line-strong px-1 text-[11px] text-ink-soft tabular-nums hover:bg-hover"
-          >
-            <Network className="h-2.5 w-2.5" />
-            {task.subtaskCount}
-          </button>
-        ) : null}
-        {task.hasDescription && <AlignLeft className="h-3 w-3 shrink-0 text-ink-faint" />}
-      </div>
-
-      {/* Assignee */}
-      <div className="flex w-24 shrink-0 items-center">
-        <button
-          title={user ? `Assigned to ${user.name}` : 'Assign'}
-          onClick={openPop('assignee')}
-          className={`flex cursor-pointer items-center justify-center rounded-full ${
-            user
-              ? ''
-              : 'h-[22px] w-[22px] border border-dashed border-line-strong hover:bg-hover'
-          }`}
-        >
-          {user ? (
-            <Avatar initials={user.initials} color={user.color} size={22} title={user.name} />
-          ) : (
-            <UserRound className="h-3 w-3 text-ink-faint" />
-          )}
-        </button>
-      </div>
-
-      {/* Due date */}
-      <div className="flex w-24 shrink-0 items-center">
-        {task.dueDate ? (
-          <button
-            onClick={openPop('due')}
-            className={`cursor-pointer rounded px-0.5 text-[12.5px] hover:bg-hover ${
-              task.dueOverdue ? 'text-[#d8354f]' : 'text-ink-soft'
-            }`}
-          >
-            {task.dueDate}
-          </button>
-        ) : (
-          <button
-            title="Set due date"
-            onClick={openPop('due')}
-            className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-md hover:bg-hover"
-          >
-            <CalendarPlus className="h-3.5 w-3.5 text-ink-faint" />
-          </button>
-        )}
-      </div>
-
-      {/* Priority */}
-      <div className="flex w-24 shrink-0 items-center">
-        <button
-          title={priorityMeta ? `Priority: ${priorityMeta.label}` : 'Set priority'}
-          onClick={openPop('priority')}
-          className="flex h-[22px] cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-hover"
-        >
-          {priorityMeta ? (
-            <>
-              <Flag
-                className="h-3.5 w-3.5"
-                style={{ color: priorityMeta.color }}
-                fill={priorityMeta.color}
+    <>
+      <div
+        className={`group/row relative flex h-9 items-center border-b border-line px-2 text-[13.5px] transition-colors hover:bg-panel ${
+          isSubtask ? 'pl-9' : ''
+        }`}
+      >
+        {/* Hover gutter: grip + checkbox + expand chevron */}
+        <div className="flex w-6 shrink-0 items-center justify-end gap-0.5 opacity-0 group-hover/row:opacity-100">
+          <span className="cursor-grab text-ink-faint">⠿</span>
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2 pl-1.5">
+          <span className="hidden h-3.5 w-3.5 shrink-0 cursor-pointer rounded-[3px] border border-line-strong group-hover/row:block" />
+          {hasSubs ? (
+            <button
+              title={expandedSubs ? 'Collapse subtasks' : 'Expand subtasks'}
+              onClick={() => setExpandedSubs((x) => !x)}
+              className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint hover:bg-hover"
+            >
+              <ChevronRight
+                className={`h-3 w-3 transition-transform ${expandedSubs ? 'rotate-90' : ''}`}
               />
-              <span className="text-[12.5px] text-ink-soft">{priorityMeta.label}</span>
-            </>
+            </button>
           ) : (
-            <Flag className="h-3.5 w-3.5 text-ink-faint" />
-          )}
-        </button>
-      </div>
-
-      {/* Time estimate */}
-      <div className="flex w-28 shrink-0 items-center">
-        <button
-          title="Set time estimate"
-          onClick={openPop('estimate')}
-          className={`flex cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 hover:bg-hover ${
-            task.estimateHours === undefined ? 'opacity-0 group-hover/row:opacity-100' : ''
-          }`}
-        >
-          <Hourglass className="h-3 w-3 text-ink-faint" />
-          {task.estimateHours !== undefined && (
-            <span className="text-[12.5px] text-ink-soft tabular-nums">
-              {task.estimateHours}h
+            <span className="hidden h-4 w-4 shrink-0 items-center justify-center text-ink-faint group-hover/row:flex">
+              <ChevronRight className="h-3 w-3 opacity-40" />
             </span>
           )}
-        </button>
+          <button title="Change status" onClick={openPop('status')} className="cursor-pointer">
+            {isSubtask ? (
+              <span className="h-[13px] w-[13px] shrink-0 rounded-full border-[1.5px] border-dashed border-line-strong" />
+            ) : (
+              <RowStatusIcon status={status} />
+            )}
+          </button>
+          <button
+            onClick={() => openTask(task.id)}
+            className="cursor-pointer truncate text-left text-ink hover:text-brand-deep"
+          >
+            {task.name}
+          </button>
+          {hasSubs && (
+            <button
+              onClick={() => setExpandedSubs((x) => !x)}
+              className="flex shrink-0 cursor-pointer items-center gap-0.5 rounded border border-line-strong px-1 text-[11px] text-ink-soft tabular-nums hover:bg-hover"
+            >
+              <Network className="h-2.5 w-2.5" />
+              {subtasks.length}
+            </button>
+          )}
+          {task.hasDescription && (
+            <button
+              onMouseEnter={startPreview}
+              onMouseLeave={stopPreview}
+              onClick={() => openTask(task.id)}
+              className="cursor-pointer"
+              aria-label="Description"
+            >
+              <AlignLeft className="h-3 w-3 shrink-0 text-ink-faint" />
+            </button>
+          )}
+          {(task.tags ?? []).map((tid) =>
+            workspaceTags[tid] ? <TagChip key={tid} tag={workspaceTags[tid]} /> : null,
+          )}
+          {/* Hover actions after chips */}
+          <span className="hidden items-center gap-0.5 group-hover/row:flex">
+            {task.tags?.length ? (
+              <button
+                title="Edit tags"
+                onClick={() => comingSoon(notify, 'Tag editing from the row')}
+                className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-ink-faint hover:bg-hover"
+              >
+                <Tag className="h-3 w-3" />
+              </button>
+            ) : null}
+            <button
+              title="Add"
+              onClick={() => comingSoon(notify, 'Quick add')}
+              className="flex h-5 w-5 cursor-pointer items-center justify-center rounded border border-line-strong text-ink-faint hover:bg-hover"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <button
+              title="Rename"
+              onClick={() => comingSoon(notify, 'Renaming tasks')}
+              className="flex h-5 w-5 cursor-pointer items-center justify-center rounded border border-line-strong text-ink-faint hover:bg-hover"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
+
+        {/* Assignee */}
+        <div className="flex w-28 shrink-0 items-center">
+          {assignees.length ? (
+            <button
+              onClick={openPop('assignee', 268)}
+              className="flex cursor-pointer -space-x-1.5"
+              title={assignees.map((a) => a.name).join(', ')}
+            >
+              {assignees.slice(0, 3).map((a) => (
+                <span key={a.id} className="rounded-full ring-2 ring-white">
+                  <Avatar initials={a.initials} color={a.color} size={24} title={a.name} />
+                </span>
+              ))}
+            </button>
+          ) : (
+            <button
+              title="Assign"
+              onClick={openPop('assignee', 268)}
+              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-full border border-dashed border-line-strong hover:bg-hover"
+            >
+              <UserRound className="h-3 w-3 text-ink-faint" />
+            </button>
+          )}
+        </div>
+
+        {/* Due date */}
+        <div className="flex w-28 shrink-0 items-center">
+          {task.dueDate ? (
+            <button
+              onClick={openPop('due', 560)}
+              className={`cursor-pointer rounded px-0.5 text-[12.5px] hover:bg-hover ${
+                task.dueOverdue ? 'text-[#d8354f]' : 'text-ink-soft'
+              }`}
+            >
+              {task.dueDate}
+            </button>
+          ) : (
+            <button
+              title="Set due date"
+              onClick={openPop('due', 560)}
+              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-md hover:bg-hover"
+            >
+              <CalendarPlus className="h-3.5 w-3.5 text-ink-faint" />
+            </button>
+          )}
+        </div>
+
+        {/* Priority */}
+        <div className="flex w-24 shrink-0 items-center">
+          <button
+            title={priorityMeta ? `Priority: ${priorityMeta.label}` : 'Set priority'}
+            onClick={openPop('priority', 200)}
+            className="flex h-[22px] cursor-pointer items-center gap-1 rounded-md px-1 hover:bg-hover"
+          >
+            {priorityMeta ? (
+              <>
+                <Flag
+                  className="h-3.5 w-3.5"
+                  style={{ color: priorityMeta.color }}
+                  fill={priorityMeta.color}
+                />
+                <span className="text-[12.5px] text-ink-soft">{priorityMeta.label}</span>
+              </>
+            ) : (
+              <Flag className="h-3.5 w-3.5 text-ink-faint" />
+            )}
+          </button>
+        </div>
+
+        {/* Time estimate (sprint lists only) */}
+        {showEstimate && (
+          <div className="flex w-28 shrink-0 items-center">
+            <button
+              title="Set time estimate"
+              onClick={openPop('estimate')}
+              className={`flex cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 hover:bg-hover ${
+                task.estimateHours === undefined ? 'opacity-0 group-hover/row:opacity-100' : ''
+              }`}
+            >
+              <Hourglass className="h-3 w-3 text-ink-faint" />
+              {task.estimateHours !== undefined && (
+                <span className="text-[12.5px] text-ink-soft tabular-nums">
+                  {task.estimateHours}h
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Row menu */}
+        <div className="flex w-8 shrink-0 items-center justify-center">
+          <button
+            title="Task menu"
+            onClick={openPop('menu')}
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-ink-faint opacity-0 group-hover/row:opacity-100 hover:bg-hover"
+          >
+            <Ellipsis className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Trailing spacer */}
-      <div className="w-8 shrink-0" />
+      {/* Subtask rows */}
+      {expandedSubs &&
+        subtasks.map((sub) => (
+          <TaskRowV2
+            key={sub.id}
+            task={sub}
+            status={taskStatuses[sub.statusId] ?? status}
+            allTasks={allTasks}
+            showEstimate={showEstimate}
+            onAssigned={onAssigned}
+            isSubtask
+          />
+        ))}
 
-      {/* Cell popovers */}
-      {pop?.kind === 'status' && (
+      {/* Popovers */}
+      {pop?.kind === 'status' && <StatusDropdown task={task} pos={pop.pos} onClose={close} />}
+      {pop?.kind === 'assignee' && <AssigneePicker task={task} pos={pop.pos} onClose={close} />}
+      {pop?.kind === 'due' && <DatePickerPopover task={task} pos={pop.pos} onClose={close} />}
+      {pop?.kind === 'menu' && <TaskRowMenu task={task} pos={pop.pos} onClose={close} />}
+      {pop?.kind === 'estimate' && (
         <Popover pos={pop.pos} onClose={close}>
-          <div className="px-2.5 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">Status</div>
-          {statusOrder.map((sid) => {
-            const st = taskStatuses[sid]
-            return (
-              <PopoverItem
-                key={sid}
-                selected={sid === task.statusId}
-                onClick={() => {
-                  setTaskStatus(task.id, sid)
-                  close()
-                }}
-              >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full border-[2.5px]"
-                  style={{ borderColor: st.color }}
-                />
-                <span className="truncate text-[12px] font-semibold tracking-wide">
-                  {st.label}
-                </span>
-                {sid === task.statusId && <Check className="ml-auto h-3.5 w-3.5 text-brand" />}
-              </PopoverItem>
-            )
-          })}
-        </Popover>
-      )}
-
-      {pop?.kind === 'assignee' && (
-        <Popover pos={pop.pos} onClose={close}>
-          <div className="px-2.5 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">
-            Assign to
-          </div>
-          {Object.values(users)
-            .filter((u) => u.id !== 'azad')
-            .map((u) => (
-              <PopoverItem
-                key={u.id}
-                selected={task.assigneeIds?.includes(u.id)}
-                onClick={() => {
-                  toggleTaskAssignee(task.id, u.id)
-                  close()
-                }}
-              >
-                <Avatar initials={u.initials} color={u.color} size={20} />
-                <span className="truncate">{u.name}</span>
-                {task.assigneeIds?.includes(u.id) && (
-                  <Check className="ml-auto h-3.5 w-3.5 text-brand" />
-                )}
-              </PopoverItem>
-            ))}
-          {!!task.assigneeIds?.length && (
-            <PopoverItem
-              onClick={() => {
-                clearTaskAssignees(task.id)
-                close()
-              }}
-            >
-              <X className="h-3.5 w-3.5 text-ink-faint" />
-              <span className="text-ink-soft">Remove assignee</span>
-            </PopoverItem>
-          )}
-        </Popover>
-      )}
-
-      {pop?.kind === 'due' && (
-        <Popover pos={pop.pos} onClose={close}>
-          <DueDateEditor
-            onSet={(iso) => {
-              setTaskDueDate(task.id, iso)
+          <EstimateEditor
+            initial={task.estimateHours}
+            onSet={(h) => {
+              setTaskEstimate(task.id, h)
               close()
             }}
             onClear={
-              task.dueDate
+              task.estimateHours !== undefined
                 ? () => {
-                    setTaskDueDate(task.id, undefined)
+                    setTaskEstimate(task.id, undefined)
                     close()
                   }
                 : undefined
@@ -508,12 +753,9 @@ function TaskRow({
           />
         </Popover>
       )}
-
       {pop?.kind === 'priority' && (
         <Popover pos={pop.pos} onClose={close} width={200}>
-          <div className="px-2.5 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">
-            Priority
-          </div>
+          <div className="px-2.5 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">Priority</div>
           {(Object.keys(PRIORITY_META) as TaskPriority[]).map((p) => (
             <PopoverItem
               key={p}
@@ -539,72 +781,15 @@ function TaskRow({
                 close()
               }}
             >
-              <X className="h-3.5 w-3.5 text-ink-faint" />
+              <Circle className="h-3.5 w-3.5 text-ink-faint" />
               <span className="text-ink-soft">Clear</span>
             </PopoverItem>
           )}
         </Popover>
       )}
 
-      {pop?.kind === 'estimate' && (
-        <Popover pos={pop.pos} onClose={close}>
-          <EstimateEditor
-            initial={task.estimateHours}
-            onSet={(h) => {
-              setTaskEstimate(task.id, h)
-              close()
-            }}
-            onClear={
-              task.estimateHours !== undefined
-                ? () => {
-                    setTaskEstimate(task.id, undefined)
-                    close()
-                  }
-                : undefined
-            }
-          />
-        </Popover>
-      )}
-    </div>
-  )
-}
-
-function DueDateEditor({
-  onSet,
-  onClear,
-}: {
-  onSet: (iso: string) => void
-  onClear?: () => void
-}) {
-  const [value, setValue] = useState('')
-  return (
-    <div className="flex flex-col gap-2 p-2">
-      <div className="text-[11.5px] font-medium text-ink-faint">Due date</div>
-      <input
-        type="date"
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="h-8 rounded-md border border-line-strong px-2 text-[13px] text-ink outline-none focus:border-brand"
-      />
-      <div className="flex items-center gap-2">
-        <button
-          disabled={!value}
-          onClick={() => value && onSet(value)}
-          className="flex h-7 flex-1 cursor-pointer items-center justify-center rounded-md bg-[#1f2228] text-[12.5px] font-medium text-white hover:bg-black disabled:cursor-default disabled:opacity-40"
-        >
-          Set date
-        </button>
-        {onClear && (
-          <button
-            onClick={onClear}
-            className="h-7 cursor-pointer rounded-md border border-line-strong px-2.5 text-[12.5px] text-ink-soft hover:bg-hover"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-    </div>
+      {preview && <DescriptionPreview task={task} pos={preview} />}
+    </>
   )
 }
 
