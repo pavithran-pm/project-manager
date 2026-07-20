@@ -28,6 +28,20 @@ export const users: Record<string, User> = {
   abinaya: { id: 'abinaya', name: 'Abinaya Suresh', initials: 'A', color: '#ef8b3a' },
   anamul: { id: 'anamul', name: 'Anamul Hasan', initials: 'AH', color: '#a04545' },
   azad: { id: 'azad', name: 'azad.vt@techjays.com', initials: 'A', color: '#8a6fe8' },
+  // MVP - MSM sprint crew (avatar hues per the video: S green, N purple, M charcoal,
+  // A red-orange, L purple, K teal, G blue)
+  kanish: { id: 'kanish', name: 'Kanish', initials: 'K', color: '#14b0a6' },
+  nithishkumar: {
+    id: 'nithishkumar',
+    name: 'Nithishkumar Krishnamoorthy',
+    initials: 'N',
+    color: '#8a5fe8',
+  },
+  golam: { id: 'golam', name: 'Golam Kibria', initials: 'G', color: '#4a80f5' },
+  arjun: { id: 'arjun', name: 'Arjun', initials: 'A', color: '#e0552f' },
+  shanmugaraj: { id: 'shanmugaraj', name: 'shanmugaraj', initials: 'S', color: '#27ae60' },
+  md: { id: 'md', name: 'Md', initials: 'M', color: '#3f4650' },
+  lavanya: { id: 'lavanya', name: 'Lavanya', initials: 'L', color: '#9b6dd6' },
 }
 
 export const currentUserId = 'pavithran'
@@ -51,11 +65,42 @@ export const spaces: Space[] = [
         id: 'mvp-msm',
         name: 'MVP - MSM',
         items: [
-          { id: 'sprint1', name: 'Sprint 1 (24/11 - 15/12)', icon: 'sprint', count: 1 },
-          { id: 'sprint2', name: 'Sprint 2 (16/12 - 7/1)', icon: 'sprint', count: 12 },
-          { id: 'sprint3', name: 'Sprint 3 (12/1 - 1/2)', icon: 'sprint', count: 14 },
+          {
+            id: 'sprint1',
+            name: 'Sprint 1 (24/11 - 15/12)',
+            icon: 'sprint',
+            count: 1,
+            sprintMeta: {
+              done: true,
+              range: 'Nov 24 - Dec 15',
+              notEst: 1,
+              descriptionTitle: 'Figma Link',
+              descriptionText: 'Data upload, Sales, Purchase and Quotes screens',
+            },
+          },
+          {
+            id: 'sprint2',
+            name: 'Sprint 2 (16/12 - 7/1)',
+            icon: 'sprint',
+            count: 12,
+            sprintMeta: { done: true, range: 'Dec 16 - Jan 7', notEst: 2 },
+          },
+          {
+            id: 'sprint3',
+            name: 'Sprint 3 (12/1 - 1/2)',
+            icon: 'sprint',
+            count: 14,
+            sprintMeta: { done: true, range: 'Jan 12 - Feb 1', notEst: 6 },
+          },
           { id: 'retro1', name: 'Sprint 1 Retro Board', icon: 'whiteboard' },
-          { id: 'sprint4', name: 'Sprint 4 (2/2 - 22/2)', icon: 'sprint', count: 35, countStyle: 'pill' },
+          {
+            id: 'sprint4',
+            name: 'Sprint 4 (2/2 - 22/2)',
+            icon: 'sprint',
+            count: 35,
+            countStyle: 'pill',
+            sprintMeta: { done: true, range: 'Feb 2-22', notEst: 14 },
+          },
         ],
       },
     ],
@@ -592,67 +637,186 @@ function buildBacklog(): Task[] {
 export const tasks: Task[] = [
   ...buildBacklog(),
 
-  // Sprint 4 (2/2 - 22/2) — from the earlier reference screenshot
-  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items (Widget)', {
-    subtaskCount: 2, hasDescription: true, estimateHours: 6,
+  // ---- MVP - MSM sprints (video dataset: folder list [24s-31s], board [36s-46s], table [57s-67s]) ----
+
+  // Sprint 1 (24/11 - 15/12) — READY FOR BA REVIEW IN QA (1)
+  task('sprint1', 'readyForBaReviewInQa', 'Sprint 1- Defects', { subtaskCount: 48 }),
+
+  // Sprint 2 (16/12 - 7/1) — BA REVIEW COMPLETE (12), green completed dates
+  task('sprint2', 'baReviewComplete', 'Upload Data', {
+    subtaskCount: 1, hasDescription: true, assigneeIds: ['md', 'nithishkumar'], dueDate: '11/26/25', dueDone: true, imagePreview: true,
   }),
-  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items Detailed Page', {
-    subtaskCount: 3, hasDescription: true, estimateHours: 8,
+  task('sprint2', 'baReviewComplete', 'Data Upload Listing page', {
+    subtaskCount: 2, hasDescription: true, attachmentCount: 1, assigneeIds: ['md', 'nithishkumar'], dueDate: '11/28/25 12:00 pm', dueDone: true,
   }),
-  task('sprint4', 'holdForInfo', 'Microsoft Account Setup', {
-    subtaskCount: 1, estimateHours: 12,
+  task('sprint2', 'baReviewComplete', 'Quote Listing page', {
+    subtaskCount: 2, hasDescription: true, assigneeIds: ['arjun', 'nithishkumar'], dueDate: '11/27/25 12:00 pm', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Header', {
-    subtaskCount: 2, hasDescription: true, dueDate: '12/5/25', dueOverdue: true, estimateHours: 8,
+  task('sprint2', 'baReviewComplete', 'Quote Details page', {
+    hasDescription: true, assigneeIds: ['arjun', 'nithishkumar'], dueDate: '11/28/25 12:00 pm', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Sales History', {
-    subtaskCount: 3, hasDescription: true, dueDate: '12/8/25', dueOverdue: true, estimateHours: 18,
+  task('sprint2', 'baReviewComplete', 'Purchase Listing page', {
+    subtaskCount: 2, hasDescription: true, attachmentCount: 1, assigneeIds: ['kanish', 'nithishkumar'], dueDate: '11/26/25', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Quote History', {
-    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true, estimateHours: 18,
+  task('sprint2', 'baReviewComplete', 'Sales Listing page', {
+    subtaskCount: 5, hasDescription: true, assigneeIds: ['golam', 'nithishkumar'], dueDate: '11/26/25 12:00 pm', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Purchase History', {
-    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true, estimateHours: 18,
+  task('sprint2', 'baReviewComplete', 'Inventory Listing Page', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['golam', 'kanish', 'nithishkumar'], dueDate: '11/28/25 4:00 pm', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product details page - Inventory Forecast Trend Chart', {
-    subtaskCount: 2, hasDescription: true, estimateHours: 16,
+  task('sprint2', 'baReviewComplete', 'Purchase Order Details page', {
+    subtaskCount: 1, hasDescription: true, assigneeIds: ['kanish', 'nithishkumar'], dueDate: '11/27/25', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product details page - Pricing History Chart', {
-    subtaskCount: 2, hasDescription: true, estimateHours: 8,
+  task('sprint2', 'baReviewComplete', 'Sales Order Details page', {
+    subtaskCount: 1, hasDescription: true, assigneeIds: ['golam', 'lavanya', 'nithishkumar'], dueDate: '11/27/25', dueDone: true,
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Stock Status Overview and Location Distribution', {
-    subtaskCount: 2, hasDescription: true, estimateHours: 8,
+  task('sprint2', 'baReviewComplete', 'QA Efforts', {
+    subtaskCount: 5, assigneeIds: ['nithishkumar'],
   }),
-  task('sprint4', 'qaInProgress', 'Product Details page - Warehouse Location Distribution', {
-    subtaskCount: 2, estimateHours: 8,
+  task('sprint2', 'baReviewComplete', 'Show Line Item Status on Sales Order Details Page', {
+    hasDescription: true, attachmentCount: 1, assigneeIds: ['golam'],
   }),
-  task('sprint4', 'qaInProgress', 'Product details page - Reserved Stock Handling', {
-    subtaskCount: 1, estimateHours: 12,
+  task('sprint2', 'baReviewComplete', 'Exclude Non-Lbs Items from Tables and Metrics', {
+    subtaskCount: 3, hasDescription: true, tags: ['clientFeedback'], assigneeIds: ['arjun', 'golam', 'kanish'], dueDate: '12/17/25', dueDone: true, priority: 'urgent',
   }),
 
-  // Earlier sprints
-  task('sprint1', 'movedToProduction', 'Login & Authentication Flow', {
-    subtaskCount: 4, hasDescription: true, assigneeIds: ['abdulRahuman'], estimateHours: 16,
+  // Sprint 3 (12/1 - 1/2) — READY FOR BA REVIEW IN QA (11) + QA COMPLETE (3)
+  task('sprint3', 'readyForBaReviewInQa', 'User Sign In', {
+    subtaskCount: 7, hasDescription: true, assigneeIds: ['golam', 'shanmugaraj'], dueDate: '12/19/25', dueOverdue: true,
   }),
-  task('sprint2', 'movedToProduction', 'Inventory Sync Service', {
-    subtaskCount: 3, hasDescription: true, assigneeIds: ['abirami'], estimateHours: 24,
+  task('sprint3', 'readyForBaReviewInQa', 'Log Out', {
+    subtaskCount: 1, hasDescription: true, assigneeIds: ['golam', 'shanmugaraj'], dueDate: '12/19/25', dueOverdue: true,
   }),
-  task('sprint2', 'movedToProduction', 'Warehouse Master Data Screens', {
-    subtaskCount: 2, assigneeIds: ['abdullah'], estimateHours: 12,
+  task('sprint3', 'readyForBaReviewInQa', 'Forecast Listing issues', {
+    subtaskCount: 11, assigneeIds: ['shanmugaraj', 'kanish'],
   }),
-  task('sprint2', 'devInProgress', 'Purchase Order Import', {
-    subtaskCount: 2, hasDescription: true, assigneeIds: ['abinaya'], estimateHours: 10,
+  task('sprint3', 'readyForBaReviewInQa', 'Vendor Listing page', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['shanmugaraj', 'md'], dueDate: '12/12/25', dueOverdue: true,
   }),
-  task('sprint2', 'toDo', 'Email Notification Templates', { estimateHours: 6 }),
-  task('sprint3', 'movedToProduction', 'Dashboard - Stock Ageing Widget', {
-    subtaskCount: 2, hasDescription: true, assigneeIds: ['anamul'], estimateHours: 8,
+  task('sprint3', 'readyForBaReviewInQa', 'Vendor Details page', {
+    subtaskCount: 4, hasDescription: true, attachmentCount: 1, imagePreview: true, assigneeIds: ['shanmugaraj', 'arjun'], dueDate: '12/11/25', dueOverdue: true,
   }),
-  task('sprint3', 'devInProgress', 'Dashboard - Slow Moving Items', {
-    subtaskCount: 3, hasDescription: true, assigneeIds: ['abirami'], dueDate: '1/28/26', estimateHours: 14,
+  task('sprint3', 'readyForBaReviewInQa', 'User Management page', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['shanmugaraj', 'golam'], dueDate: '12/19/25', dueOverdue: true,
   }),
-  task('sprint3', 'toDo', 'Ask AI - Email Knowledge Source', {
-    subtaskCount: 1, estimateHours: 12,
+  task('sprint3', 'readyForBaReviewInQa', 'Access and Permissions', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['shanmugaraj', 'golam', 'kanish'],
   }),
+  task('sprint3', 'readyForBaReviewInQa', 'Customer Listing page', {
+    subtaskCount: 4, hasDescription: true, assigneeIds: ['shanmugaraj', 'md'], dueDate: '12/9/25', dueOverdue: true,
+  }),
+  task('sprint3', 'readyForBaReviewInQa', 'Customer Details page', {
+    subtaskCount: 3, hasDescription: true, assigneeIds: ['shanmugaraj', 'md'], dueDate: '12/12/25', dueOverdue: true,
+  }),
+  task('sprint3', 'readyForBaReviewInQa', 'Forecast Listing Page', {
+    subtaskCount: 2, hasDescription: true, assigneeIds: ['kanish', 'shanmugaraj'], dueDate: '12/23/25', dueOverdue: true,
+  }),
+  task('sprint3', 'readyForBaReviewInQa', 'Profile page', {
+    subtaskCount: 2, hasDescription: true, assigneeIds: ['golam', 'shanmugaraj'],
+  }),
+  task('sprint3', 'qaComplete', 'Sprint 2 - Defects', {
+    subtaskCount: 14, assigneeIds: ['kanish', 'shanmugaraj', 'golam', 'lavanya'],
+  }),
+  task('sprint3', 'qaComplete', 'Sprint 2- QA Efforts', {
+    subtaskCount: 6, assigneeIds: ['lavanya', 'nithishkumar'],
+  }),
+  task('sprint3', 'qaComplete', 'Regression Issues', { subtaskCount: 16 }),
+
+  // Sprint 4 (2/2 - 22/2) — DEV COMPLETED (2) + HOLD (1) + QA IN PROGRESS (9) +
+  // READY FOR QA (12) + DEV IN PROGRESS (3) + READY FOR DEV (7) + TO DO (1) = 35
+  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items (Widget)', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'devCompleted', 'Dashboard - Fast Moving Items Detailed Page', {
+    subtaskCount: 3, hasDescription: true,
+  }),
+  task('sprint4', 'holdForInfo', 'Microsoft Account Setup', { subtaskCount: 1 }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Header', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/5/25', dueOverdue: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Sales History', {
+    subtaskCount: 3, hasDescription: true, dueDate: '12/8/25', dueOverdue: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Quote History', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Purchase History', {
+    subtaskCount: 2, hasDescription: true, dueDate: '12/9/25', dueOverdue: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product details page - Inventory Forecast Trend Chart', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product details page - Pricing History Chart', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Product Details page - Stock Status Overview and Location Distribution', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'qaInProgress', 'Export exports only paginated rows instead of all records in Customer and Vendor listings', {
+    hasDescription: true, attachmentCount: 1, priority: 'high',
+  }),
+  task('sprint4', 'qaInProgress', 'QA Feedback: OTP delivery time is close to timer expiration', {
+    hasDescription: true, dueDate: '1/20/26', dueOverdue: true, priority: 'low',
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Inventory Value Trend Graph', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Summary Cards (At top)', {
+    subtaskCount: 2, hasDescription: true, tags: ['msm'],
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Quoted Items Widget', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Customers Widget', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Slow Moving Items Widget', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Demand vs Supply Graph', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Vendors Detailed Page', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Vendors Widget', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Customers Detailed Page', {
+    subtaskCount: 3, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Top Quoted Items Detailed Page', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Dashboard - Slow Moving Items Detailed Page', {
+    subtaskCount: 4, hasDescription: true,
+  }),
+  task('sprint4', 'readyForQa', 'Sprint 3 - Defects', { subtaskCount: 7 }),
+  task('sprint4', 'devInProgress', 'ML - VertexAI Forecasting - EDA', {
+    subtaskCount: 6, dueDate: '12/15/25', dueOverdue: true,
+  }),
+  task('sprint4', 'devInProgress', 'Dashboard - Critical Stock Items Widget', {
+    hasDescription: true, tags: ['msm'],
+  }),
+  task('sprint4', 'devInProgress', 'Dashboard - Critical Stock Items Detailed Page', {
+    hasDescription: true, tags: ['msm'],
+  }),
+  task('sprint4', 'readyForDev', 'Update logo', {}),
+  task('sprint4', 'readyForDev', 'Add Vendor name and Product group name (Mapping updated on the sheet)', {}),
+  task('sprint4', 'readyForDev', 'Sorting functionality should be addressed for all columns across modules', {
+    priority: 'high',
+  }),
+  task('sprint4', 'readyForDev', 'Product details page - Excess Stock Alert', {
+    hasDescription: true, tags: ['msm'],
+  }),
+  task('sprint4', 'readyForDev', 'Product details page - Reorder Alert', {
+    hasDescription: true, tags: ['msm'],
+  }),
+  task('sprint4', 'readyForDev', 'The summary cards show the current totals, with month-over-month comparisons displayed underneath', {}),
+  task('sprint4', 'readyForDev', 'Dashboard - Inventory by Category', {
+    subtaskCount: 2, hasDescription: true,
+  }),
+  task('sprint4', 'toDo', 'Sprint 3- QA Efforts', { subtaskCount: 6 }),
 
   // "List" under MSM — matches the video: QA COMPLETE (1) / TO DO (0)
   task('list1', 'qaComplete', 'MSM go-live checklist', { hasDescription: true, estimateHours: 4 }),
