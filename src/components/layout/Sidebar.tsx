@@ -2,18 +2,14 @@ import { useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  AtSign,
   ChevronDown,
-  CircleCheckBig,
   CircleDot,
   Ellipsis,
   Folder,
-  Hash,
   Inbox,
   ListTodo,
   Lock,
   Plus,
-  Reply,
   Shapes,
   SlidersHorizontal,
   Zap,
@@ -229,9 +225,6 @@ function SpaceBlock({ space }: { space: Space }) {
 
 export function Sidebar() {
   const workspaceName = useAppStore((s) => s.workspaceName)
-  const users = useAppStore((s) => s.users)
-  const dmUserIds = useAppStore((s) => s.dmUserIds)
-  const channels = useAppStore((s) => s.channels)
   const spaces = useAppStore((s) => s.spaces)
   const notifications = useAppStore((s) => s.notifications)
   const openCreateSpace = useAppStore((s) => s.openCreateSpace)
@@ -280,72 +273,7 @@ export function Sidebar() {
               </span>
             )}
           </Row>
-          <Row onClick={soon('The Replies screen')}>
-            <Reply className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">Replies</span>
-          </Row>
-          <Row onClick={soon('The Assigned Comments screen')}>
-            <AtSign className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">Assigned Comments</span>
-          </Row>
-          <Row onClick={soon('The My Tasks screen')}>
-            <CircleCheckBig className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">My Tasks</span>
-          </Row>
-          <Row onClick={soon('The expanded Home menu')}>
-            <Ellipsis className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">More</span>
-          </Row>
         </nav>
-
-        {/* AI Chats */}
-        <Section label="AI Chats">
-          <Row muted onClick={soon('AI Chats')}>
-            <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">Ask, Build, Create</span>
-          </Row>
-        </Section>
-
-        {/* Channels */}
-        <Section label="Channels">
-          {channels.map((channel) => (
-            <Row key={channel.id} onClick={soon(`The #${channel.name} channel`)}>
-              {channel.iconStyle === 'filled' ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-[#3d434d]">
-                  <Hash className="h-2.5 w-2.5 text-white" />
-                </span>
-              ) : (
-                <Hash className="h-4 w-4 shrink-0 text-ink-soft" />
-              )}
-              <span className="truncate">
-                {channel.name}
-                {channel.suffix && <span className="text-ink-faint"> - {channel.suffix}</span>}
-              </span>
-            </Row>
-          ))}
-          <Row muted onClick={soon('Channel creation')}>
-            <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">Add Channel</span>
-          </Row>
-        </Section>
-
-        {/* Direct Messages */}
-        <Section label="Direct Messages">
-          {dmUserIds.map((id) => {
-            const user = users[id]
-            if (!user) return null
-            return (
-              <Row key={id} onClick={soon(`Direct messages with ${user.name}`)}>
-                <Avatar initials={user.initials} color={user.color} size={20} />
-                <span className="truncate">{user.name}</span>
-              </Row>
-            )
-          })}
-          <Row muted onClick={soon('New direct messages')}>
-            <Plus className="h-4 w-4 shrink-0 text-ink-soft" />
-            <span className="truncate">New message</span>
-          </Row>
-        </Section>
 
         {/* Spaces */}
         <Section
