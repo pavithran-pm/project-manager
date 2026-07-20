@@ -8,6 +8,7 @@ import { InboxPage } from './features/inbox/InboxPage'
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
 import { FolderPage } from './features/space/FolderPage'
 import { ListPage } from './features/space/ListPage'
+import { CustomizeViewPanel } from './features/space/CustomizeViewPanel'
 import { NewTaskModal } from './features/task/NewTaskModal'
 import { TaskModal } from './features/task/TaskModal'
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage'
@@ -83,6 +84,7 @@ export default function App() {
         <SearchModal />
         <TaskModal />
         <NewTaskModal />
+        <CustomizeViewPanel />
         <ToastHost />
       </div>
     </Router>
