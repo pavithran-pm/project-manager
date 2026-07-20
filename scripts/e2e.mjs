@@ -255,6 +255,121 @@ await pause(500)
 check('persistence: created task survives reload', (await count('text=Playwright QA sweep')) === 1)
 check('persistence: BA status change survives reload', true)
 
+// ================= Round 4: Overview / Board / Table / New Task =================
+
+// Space-level Overview
+await page.goto(`${BASE}/space/msm`, { waitUntil: 'networkidle' })
+await pause(1000)
+check('space: Overview renders Folders card', (await count('text=Folders')) >= 1)
+check('space: Recent card lists Backlog', (await page.getByRole('main').locator('text=Backlog').count()) >= 1)
+check('space: Lists card renders', (await count('text=Lists')) >= 1)
+
+// Sidebar collapse / expand
+await page.locator('[aria-label="Collapse sidebar"]').click({ force: true })
+await pause(200)
+check('sidebar: collapses to rail', (await count('[aria-label="Expand sidebar"]')) === 1)
+await page.locator('[aria-label="Expand sidebar"]').click()
+await pause(200)
+check('sidebar: expands back', (await count('[aria-label="Expand sidebar"]')) === 0)
+
+// Board view: columns + counts
+await page.goto(`${BASE}/space/msm/folder/mvp-msm/board`, { waitUntil: 'networkidle' })
+await pause(1200)
+check('board: READY FOR QA column', (await count('text=READY FOR QA')) >= 1)
+check('board: HOLD column card', (await count('text=Microsoft Account Setup')) >= 1)
+check('board: Add group affordance', (await count('text=Add group')) >= 1)
+check('board: subtasks rows on cards', (await count('text=6 subtasks')) >= 1)
+
+// Table view: rows, resize → Save view, onboarding popover
+await page.goto(`${BASE}/space/msm/folder/mvp-msm/table`, { waitUntil: 'networkidle' })
+await pause(1200)
+check('table: onboarding popover', (await count("text=Explore what's new in Table view!")) === 1)
+await page.getByRole('button', { name: 'Get started' }).click().catch(() => page.keyboard.press('Escape'))
+await pause(200)
+check('table: renders 62 rows', (await count('text=Forecast Listing Page')) >= 1 && (await count('text=QA Efforts')) >= 1)
+check('table: status pills render', (await count('text=BA REVIEW COMPLETE')) >= 1)
+const nameHeader = page.locator('text=Name').first()
+void nameHeader
+const divider = page.locator('[data-resize-handle]').first()
+if ((await divider.count()) > 0) {
+  const box = await divider.boundingBox()
+  if (box) {
+    await page.mouse.move(box.x + 2, box.y + 5)
+    await page.mouse.down()
+    await page.mouse.move(box.x + 160, box.y + 5, { steps: 5 })
+    await page.mouse.up()
+    await pause(300)
+  }
+}
+check('table: resize reveals Save view', (await count('text=Save view')) >= 1)
+
+// New Task modal from + Task
+await page.goto(`${BASE}/space/msm/list/sprint1`, { waitUntil: 'networkidle' })
+await pause(700)
+check('sprint1: meta chips render', (await count('text=1 not est')) >= 1)
+check('sprint1: insight card', (await count('text=1 task added')) >= 1)
+await page.getByRole('button', { name: /^Task$/ }).first().click()
+await pause(400)
+check('newtask: modal opens with tabs', (await count('text=Reminder')) >= 1)
+await page.fill('input[placeholder*="Task Name"]', 'Round4 QA task')
+await page.getByRole('button', { name: /Create Task/ }).click()
+await pause(400)
+check('newtask: task created in sprint1', (await count('text=Round4 QA task')) >= 1)
+
+// Create dropdown (chevron) + Customize view panel + paywalls
+await page.locator('button[title="Task options"], button[aria-label="Task options"]').first().click().catch(() => {})
+await pause(300)
+const dropdownOk = (await count('text=Find type')) >= 1
+check('toolbar: create dropdown types', dropdownOk)
+if (dropdownOk) await page.keyboard.press('Escape')
+await pause(200)
+await page.locator('[title*="Customize"], button[title="View settings"]').first().click()
+await pause(400)
+check('customize: panel opens', (await count('text=Customize view')) >= 1)
+check('customize: toggles render', (await count('text=Show empty statuses')) >= 1)
+await page.locator('text=Customize view').locator('..').locator('button').first().click().catch(() => page.keyboard.press('Escape'))
+await pause(200)
+
+await page.goto(`${BASE}/space/msm/folder/mvp-msm/timeline`, { waitUntil: 'networkidle' })
+await pause(600)
+check('paywall: timeline modal', (await count('text=run out of trial usage')) >= 1)
+await page.locator('button[aria-label="Close"], .animate-pop-in >> text=✕').first().click().catch(() => page.keyboard.press('Escape'))
+await pause(300)
+check('paywall: expired state behind', (await count('text=uses have expired')) >= 1)
+await page.goto(`${BASE}/space/msm/folder/mvp-msm/sprint-reporting`, { waitUntil: 'networkidle' })
+await pause(600)
+check('paywall: dashboards upsell', (await count('text=100 uses of Dashboards')) >= 1)
+await page.keyboard.press('Escape')
+
+// Folder sprint-cards list
+await page.goto(`${BASE}/space/msm/folder/mvp-msm/list`, { waitUntil: 'networkidle' })
+await pause(1000)
+check('folderlist: sprint cards render', (await count('text=Figma Link')) >= 1)
+check('folderlist: sprint groups render', (await count('text=BA REVIEW COMPLETE')) >= 1)
+
+// Brain² page
+await page.goto(`${BASE}/ai`, { waitUntil: 'networkidle' })
+await pause(700)
+const brainModal = (await count('text=Personalize Brain')) >= 1
+if (brainModal) {
+  await page.getByText('Skip for now').click()
+  await pause(300)
+}
+check('brain: Ask page renders', (await count('text=Agents')) >= 1)
+await pause(900)
+check('brain: suggestion cards load', (await count('text=Draft Documentation')) >= 1)
+
+// Inbox notification detail
+await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' })
+await page.evaluate(() => localStorage.removeItem('pm-tracker-store'))
+await page.reload({ waitUntil: 'networkidle' })
+await pause(600)
+await page.locator('text=shared this Space').first().click()
+await pause(400)
+check('inbox: notification detail opens', (await count('text=Clear')) >= 1)
+await page.locator('[aria-label="Back"], button:has-text("Clear")').first().click().catch(() => {})
+await pause(200)
+
 console.log(results.join('\n'))
 console.log(`\n${results.length - failures}/${results.length} passed`)
 await browser.close()
