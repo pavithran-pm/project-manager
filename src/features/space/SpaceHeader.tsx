@@ -1,7 +1,11 @@
 import {
+  BadgeCheck,
   Brain,
+  CalendarDays,
   ChartLine,
   ChartNoAxesGantt,
+  FileText,
+  Hourglass,
   ChevronDown,
   CircleDot,
   CircleGauge,
@@ -13,6 +17,7 @@ import {
   SquareKanban,
   Star,
   Table,
+  TriangleAlert,
   UserRoundPlus,
   Video,
   Zap,
@@ -65,12 +70,13 @@ export function SpaceHeader({ spaceId, folderId, listId, activeView }: SpaceHead
 
   const favoriteId = listId ?? folderId ?? spaceId
   const isFavorite = favorites.includes(favoriteId)
-  // List pages match the video's Backlog tab set: List sits LAST and is active.
+  // List pages match the recordings: List sits LAST (after Sprint Reporting).
   const tabs = listId
-    ? ['board', 'timeline', 'workload', 'table', 'list']
+    ? ['board', 'timeline', 'workload', 'table', 'sprint-reporting', 'list']
         .map((v) => TABS.find((t) => t.view === v))
         .filter((t): t is TabDef => t !== undefined)
     : TABS
+  const sprintMeta = listItem?.sprintMeta
   const pathFor = (view: SpaceView) =>
     listId
       ? `/space/${spaceId}/list/${listId}/${view}`
@@ -81,7 +87,7 @@ export function SpaceHeader({ spaceId, folderId, listId, activeView }: SpaceHead
       {/* Row 1 — breadcrumb bar */}
       <div className="flex h-12 items-center gap-1 border-b border-line px-4">
         <button
-          onClick={soon('The Space overview')}
+          onClick={() => navigate(`/space/${space.id}`)}
           className="flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-hover"
         >
           <Avatar initials={space.abbr} color={space.color} size={18} rounded="md" />
@@ -125,6 +131,29 @@ export function SpaceHeader({ spaceId, folderId, listId, activeView }: SpaceHead
             fill={isFavorite ? '#e8a33d' : 'none'}
           />
         </button>
+        {sprintMeta && (
+          <div className="ml-1 flex shrink-0 items-center gap-2.5 text-[12.5px] text-ink-soft">
+            {sprintMeta.done && (
+              <span className="flex items-center gap-1">
+                <BadgeCheck className="h-3.5 w-3.5 text-[#27ae60]" fill="#27ae60" stroke="white" />
+                Done
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5 text-ink-faint" />
+              {sprintMeta.range}
+            </span>
+            <span className="flex items-center gap-1">
+              <Hourglass className="h-3 w-3 text-ink-faint" />-
+            </span>
+            {sprintMeta.notEst > 0 && (
+              <span className="flex items-center gap-1 text-[#c98a06]">
+                <TriangleAlert className="h-3.5 w-3.5" />
+                {sprintMeta.notEst} not est
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-1">
           <button
@@ -186,6 +215,15 @@ export function SpaceHeader({ spaceId, folderId, listId, activeView }: SpaceHead
             </button>
           )
         })}
+        {listId === 'sprint1' && (
+          <button
+            onClick={soon('The Post-Migration Updates doc')}
+            className="flex h-7 max-w-[230px] cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] text-ink-soft hover:bg-hover"
+          >
+            <FileText className="h-3.5 w-3.5 shrink-0 text-[#2e9ded]" />
+            <span className="truncate">Post-Migration Updates (Access → Acu…</span>
+          </button>
+        )}
         <span className="mx-1.5 h-4 w-px bg-line" />
         <button
           onClick={soon('Custom views')}

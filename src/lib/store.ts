@@ -60,6 +60,12 @@ interface AppState {
   groupCollapse: Record<string, string[]>
   /** Task open in the global task modal */
   selectedTaskId: string | null
+  /** Sidebar collapsed to the thin icon rail */
+  sidebarCollapsed: boolean
+  /** listId the New Task modal was opened for (null = closed) */
+  newTaskFor: string | null
+  /** Customize-view side panel open */
+  customizeViewOpen: boolean
 
   setActiveTab: (tab: TabId) => void
   dismissBanner: () => void
@@ -81,6 +87,10 @@ interface AppState {
   toggleGroup: (listId: string, statusId: string) => void
   openTask: (taskId: string) => void
   closeTask: () => void
+  toggleSidebar: () => void
+  openNewTask: (listId: string) => void
+  closeNewTask: () => void
+  setCustomizeViewOpen: (open: boolean) => void
 
   setTaskStatus: (taskId: string, statusId: string) => void
   toggleTaskAssignee: (taskId: string, userId: string) => void
@@ -142,6 +152,9 @@ export const useAppStore = create<AppState>()(
       toasts: [],
       groupCollapse: defaultGroupCollapse,
       selectedTaskId: null,
+      sidebarCollapsed: false,
+      newTaskFor: null,
+      customizeViewOpen: false,
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       dismissBanner: () => set({ bannerDismissed: true }),
@@ -261,6 +274,10 @@ export const useAppStore = create<AppState>()(
         }),
       openTask: (taskId) => set({ selectedTaskId: taskId }),
       closeTask: () => set({ selectedTaskId: null }),
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      openNewTask: (listId) => set({ newTaskFor: listId }),
+      closeNewTask: () => set({ newTaskFor: null }),
+      setCustomizeViewOpen: (open) => set({ customizeViewOpen: open }),
 
       setTaskStatus: (taskId, statusId) =>
         set((s) => ({ tasks: patchTask(s.tasks, taskId, { statusId }) })),

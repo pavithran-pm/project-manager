@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ChevronDown,
+  ChevronsLeft,
   CircleDot,
   Ellipsis,
   Folder,
@@ -155,6 +156,7 @@ function FolderBlock({ spaceId, folder }: { spaceId: string; folder: SpaceFolder
 function SpaceBlock({ space }: { space: Space }) {
   const [open, setOpen] = useState(true)
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+  const navigate = useNavigate()
 
   const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
@@ -170,7 +172,10 @@ function SpaceBlock({ space }: { space: Space }) {
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => !o)
+          navigate(`/space/${space.id}`)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') setOpen((o) => !o)
         }}
@@ -227,6 +232,8 @@ export function Sidebar() {
   const workspaceName = useAppStore((s) => s.workspaceName)
   const spaces = useAppStore((s) => s.spaces)
   const notifications = useAppStore((s) => s.notifications)
+  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const openCreateSpace = useAppStore((s) => s.openCreateSpace)
   const notify = useAppStore((s) => s.notify)
   const navigate = useNavigate()
@@ -235,11 +242,22 @@ export function Sidebar() {
 
   const primaryUnread = unreadCountForTab(notifications, 'primary')
 
+  if (sidebarCollapsed) return null
+
   return (
-    <aside className="flex w-[264px] shrink-0 flex-col border-r border-line bg-panel">
+    <aside className="group/sb flex w-[264px] shrink-0 flex-col border-r border-line bg-panel">
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center justify-between px-3.5">
         <span className="text-[15px] font-semibold text-ink">Home</span>
+        <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="Collapse sidebar"
+          onClick={toggleSidebar}
+          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-ink-soft opacity-0 transition-opacity group-hover/sb:opacity-100 hover:bg-hover"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </button>
         <div className="flex items-stretch overflow-hidden rounded-md border border-line-strong bg-white">
           <button
             type="button"
@@ -257,6 +275,7 @@ export function Sidebar() {
           >
             <ChevronDown className="h-3 w-3 text-ink-soft" />
           </button>
+        </div>
         </div>
       </div>
 

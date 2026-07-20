@@ -3,9 +3,12 @@ import { findFolder, useAppStore } from '../../lib/store'
 import type { SpaceView } from '../../lib/types'
 import { PromoBanner } from '../inbox/PromoBanner'
 import { ComingSoonPanel } from './ComingSoonPanel'
-import { ListView } from './ListView'
+import { BoardView } from './BoardView'
+import { FolderListView } from './FolderListView'
 import { OverviewTab } from './OverviewTab'
 import { SpaceHeader } from './SpaceHeader'
+import { SprintReportingUpsell, ViewPaywall } from './PaywallViews'
+import { TableView } from './TableView'
 
 export function FolderPage() {
   const { spaceId, folderId, view } = useParams()
@@ -16,15 +19,20 @@ export function FolderPage() {
 
   const activeView = (view ?? 'overview') as SpaceView
 
+  const listIds = found.folder.items.filter((i) => i.icon !== 'whiteboard').map((i) => i.id)
   let content
   if (activeView === 'overview') {
     content = <OverviewTab folderId={folderId} />
   } else if (activeView === 'list') {
-    content = (
-      <ListView
-        listIds={found.folder.items.filter((i) => i.icon !== 'whiteboard').map((i) => i.id)}
-      />
-    )
+    content = <FolderListView folderId={folderId} />
+  } else if (activeView === 'board') {
+    content = <BoardView listIds={listIds} />
+  } else if (activeView === 'table') {
+    content = <TableView listIds={listIds} />
+  } else if (activeView === 'timeline' || activeView === 'workload') {
+    content = <ViewPaywall view={activeView} />
+  } else if (activeView === 'sprint-reporting') {
+    content = <SprintReportingUpsell />
   } else {
     content = <ComingSoonPanel view={activeView} />
   }

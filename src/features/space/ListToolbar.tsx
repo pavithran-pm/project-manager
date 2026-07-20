@@ -39,7 +39,14 @@ function IconBtn({
  * left; Save view (only once the view was modified), filter icons and the
  * brand "+ Task ▾" split button on the right.
  */
-export function ListToolbar({ saveViewVisible }: { saveViewVisible: boolean }) {
+export function ListToolbar({
+  saveViewVisible,
+  listId,
+}: {
+  saveViewVisible: boolean
+  listId?: string
+}) {
+  void listId
   const notify = useAppStore((s) => s.notify)
   const setSearchOpen = useAppStore((s) => s.setSearchOpen)
   const soon = (what: string) => () => comingSoon(notify, what)

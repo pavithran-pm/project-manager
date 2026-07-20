@@ -26,6 +26,14 @@ export interface FolderItem {
   count?: number
   /** 'pill' renders a filled pink pill (like Sprint 4's "35"), 'plain' a bare number */
   countStyle?: 'plain' | 'pill'
+  /** Sprint header meta shown on sprint cards and the sprint list breadcrumb */
+  sprintMeta?: {
+    done?: boolean
+    range: string
+    notEst: number
+    descriptionTitle?: string
+    descriptionText?: string
+  }
 }
 
 export interface SpaceFolder {
@@ -92,6 +100,8 @@ export interface TaskStatus {
   group: StatusGroup
   /** 'outline' renders a white pill with gray border/text (TO DO style) */
   style?: 'outline'
+  /** Table view renders this status as an outline pill (colored icon/text) */
+  tableStyle?: 'outline'
 }
 
 export interface WorkspaceTag {
@@ -99,6 +109,8 @@ export interface WorkspaceTag {
   label: string
   bg: string
   text: string
+  /** 'filled' = solid bg + white text (board/sprint chips); 'soft' = tinted bg */
+  chip?: 'filled' | 'soft'
 }
 
 export type TaskPriority = 'urgent' | 'high' | 'normal' | 'low'
@@ -153,9 +165,14 @@ export interface Task {
   subtaskCount?: number
   hasDescription?: boolean
   assigneeIds?: string[]
-  /** e.g. "12/5/25" */
+  /** e.g. "12/5/25" or "11/28/25 4:00 pm" */
   dueDate?: string
   dueOverdue?: boolean
+  /** Green completed-date styling (board/table) */
+  dueDone?: boolean
+  attachmentCount?: number
+  /** Renders a small embedded attachment-preview block on board cards */
+  imagePreview?: boolean
   priority?: TaskPriority
   estimateHours?: number
   tags?: string[]

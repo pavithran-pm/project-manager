@@ -7,6 +7,7 @@ import {
   UserRoundPlus,
   UsersRound,
 } from 'lucide-react'
+import { ChevronsRight } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { CountBadge } from '../ui/CountBadge'
 import { unreadCountForTab, useAppStore } from '../../lib/store'
@@ -23,9 +24,21 @@ const items = [
 export function IconRail() {
   const notifications = useAppStore((s) => s.notifications)
   const homeUnread = unreadCountForTab(notifications, 'primary')
+  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
 
   return (
     <nav className="flex w-14 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-white py-1.5">
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          aria-label="Expand sidebar"
+          onClick={toggleSidebar}
+          className="mb-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:bg-hover"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </button>
+      )}
       {items.map(({ label, to, icon: Icon }) => (
         <NavLink
           key={to}

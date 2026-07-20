@@ -181,7 +181,7 @@ export function ListView({ listIds }: { listIds: string[] }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ListToolbar saveViewVisible={viewDirty} />
+      <ListToolbar saveViewVisible={viewDirty} listId={listKey} />
       <div className="relative flex-1 overflow-y-auto bg-white">
         {showCards && stats.unfinished > 0 && (
           <div className="w-full bg-[#fdeef3] px-4 py-1.5 text-center text-[12.5px] text-ink">

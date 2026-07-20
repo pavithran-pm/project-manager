@@ -8,8 +8,11 @@ import { InboxPage } from './features/inbox/InboxPage'
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage'
 import { FolderPage } from './features/space/FolderPage'
 import { ListPage } from './features/space/ListPage'
+import { NewTaskModal } from './features/task/NewTaskModal'
 import { TaskModal } from './features/task/TaskModal'
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage'
+import { BrainPage } from './features/ai/BrainPage'
+import { SpaceOverviewPage } from './features/space/SpaceOverviewPage'
 
 // Hash routing lets the single-file build (artifact / static hosting) deep-link
 // without a history-fallback server; the dev/production server keeps clean URLs.
@@ -52,6 +55,15 @@ export default function App() {
               }
             />
             <Route
+              path="/space/:spaceId"
+              element={
+                <>
+                  <Sidebar />
+                  <SpaceOverviewPage />
+                </>
+              }
+            />
+            <Route
               path="/whiteboard/:itemId"
               element={
                 <>
@@ -61,7 +73,7 @@ export default function App() {
               }
             />
             <Route path="/planner" element={<PlaceholderPage title="Planner" />} />
-            <Route path="/ai" element={<PlaceholderPage title="AI" />} />
+            <Route path="/ai" element={<><Sidebar /><BrainPage /></>} />
             <Route path="/teams" element={<PlaceholderPage title="Teams" />} />
             <Route path="/dashboards" element={<PlaceholderPage title="Dashboards" />} />
             <Route path="/more" element={<PlaceholderPage title="More" />} />
@@ -70,6 +82,7 @@ export default function App() {
         </div>
         <SearchModal />
         <TaskModal />
+        <NewTaskModal />
         <ToastHost />
       </div>
     </Router>

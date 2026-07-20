@@ -82,9 +82,9 @@ export const taskStatuses: Record<string, TaskStatus> = {
   toDo: { id: 'toDo', label: 'TO DO', color: '#87909e', group: 'not-started', style: 'outline' },
   baInProgress: { id: 'baInProgress', label: 'BA IN PROGRESS', color: '#3e5474', group: 'active' },
   readyForDev: { id: 'readyForDev', label: 'READY FOR DEV', color: '#20b0c8', group: 'active' },
-  devInProgress: { id: 'devInProgress', label: 'DEV IN PROGRESS', color: '#2ba3d4', group: 'active' },
-  readyForQa: { id: 'readyForQa', label: 'READY FOR QA', color: '#d84f8f', group: 'active' },
-  qaInProgress: { id: 'qaInProgress', label: 'QA IN PROGRESS', color: '#e8871e', group: 'active' },
+  devInProgress: { id: 'devInProgress', label: 'DEV IN PROGRESS', tableStyle: 'outline', color: '#2ba3d4', group: 'active' },
+  readyForQa: { id: 'readyForQa', label: 'READY FOR QA', tableStyle: 'outline', color: '#d84f8f', group: 'active' },
+  qaInProgress: { id: 'qaInProgress', label: 'QA IN PROGRESS', tableStyle: 'outline', color: '#e8871e', group: 'active' },
   readyForBaReview: { id: 'readyForBaReview', label: 'READY FOR BA REVIEW', color: '#8a5fe8', group: 'active' },
   baReviewInProgress: { id: 'baReviewInProgress', label: 'BA REVIEW IN PROGRESS', color: '#6f7cd0', group: 'active' },
   reopen: { id: 'reopen', label: 'REOPEN', color: '#d8354f', group: 'active' },
@@ -94,11 +94,41 @@ export const taskStatuses: Record<string, TaskStatus> = {
   noFixNeeded: { id: 'noFixNeeded', label: 'NO FIX NEEDED', color: '#64748b', group: 'active' },
   devCompleted: { id: 'devCompleted', label: 'DEV COMPLETED', color: '#87902e', group: 'active' },
   notReproduced: { id: 'notReproduced', label: 'NOT REPRODUCED', color: '#c026d3', group: 'active' },
-  qaComplete: { id: 'qaComplete', label: 'QA COMPLETE', color: '#6098a0', group: 'done' },
+  qaComplete: { id: 'qaComplete', label: 'QA COMPLETE', color: '#159a8f', group: 'done' },
+  readyForBaReviewInQa: {
+    id: 'readyForBaReviewInQa',
+    label: 'READY FOR BA REVIEW IN QA',
+    color: '#159a6b',
+    group: 'done',
+  },
   baReviewComplete: { id: 'baReviewComplete', label: 'BA REVIEW COMPLETE', color: '#27ae60', group: 'done' },
   readyForProduction: { id: 'readyForProduction', label: 'READY FOR PRODUCTION', color: '#16a34a', group: 'done' },
   movedToProduction: { id: 'movedToProduction', label: 'MOVED TO PRODUCTION', color: '#15803d', group: 'closed' },
 }
+
+/** Board column order — the workspace's canonical status pipeline */
+export const boardOrder = [
+  'toDo',
+  'baInProgress',
+  'readyForDev',
+  'devInProgress',
+  'readyForQa',
+  'qaInProgress',
+  'readyForBaReview',
+  'baReviewInProgress',
+  'reopen',
+  'notABug',
+  'holdForInfo',
+  'moveToNextSprint',
+  'noFixNeeded',
+  'devCompleted',
+  'notReproduced',
+  'qaComplete',
+  'readyForBaReviewInQa',
+  'baReviewComplete',
+  'readyForProduction',
+  'movedToProduction',
+]
 
 /** Render order of status groups in list views and the status dropdown */
 export const statusOrder = [
@@ -118,6 +148,7 @@ export const statusOrder = [
   'notReproduced',
   'toDo',
   'qaComplete',
+  'readyForBaReviewInQa',
   'baReviewComplete',
   'readyForProduction',
   'movedToProduction',
@@ -125,8 +156,16 @@ export const statusOrder = [
 
 export const workspaceTags: Record<string, WorkspaceTag> = {
   spt: { id: 'spt', label: 'spt', bg: '#e3f2fe', text: '#0898f8' },
-  msm: { id: 'msm', label: 'msm', bg: '#e3f2fe', text: '#0898f8' },
+  msm: { id: 'msm', label: 'msm', bg: '#2ea52c', text: '#ffffff', chip: 'filled' },
   pending: { id: 'pending', label: 'pending', bg: '#ece8fd', text: '#7b68ee' },
+  bug: { id: 'bug', label: 'bug', bg: '#27ae60', text: '#ffffff', chip: 'filled' },
+  clientFeedback: {
+    id: 'clientFeedback',
+    label: 'client feedback',
+    bg: '#0f7f70',
+    text: '#ffffff',
+    chip: 'filled',
+  },
 }
 
 /** Which status groups start collapsed, per list (matches the video) */
