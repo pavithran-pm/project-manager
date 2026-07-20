@@ -12,6 +12,7 @@ import {
 import { PromoBanner } from './PromoBanner'
 import { InboxTabs } from './InboxTabs'
 import { NotificationRow } from './NotificationRow'
+import { NotificationDetail } from './NotificationDetail'
 
 export function InboxPage() {
   const notifications = useAppStore((s) => s.notifications)
@@ -22,11 +23,23 @@ export function InboxPage() {
   const notify = useAppStore((s) => s.notify)
 
   const [filterPos, setFilterPos] = useState<PopoverPos | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const visible = notificationsForTab(notifications, activeTab).filter(
     (n) => !inboxUnreadOnly || !n.read,
   )
   const groups = groupNotifications(visible)
+
+  const selected = selectedId ? notifications.find((n) => n.id === selectedId) : undefined
+  // Fall back to the list if the open notification left the active tab (e.g. cleared).
+  if (selected && selectedId) {
+    return (
+      <main className="flex min-w-0 flex-1 flex-col bg-white">
+        <PromoBanner />
+        <NotificationDetail notification={selected} onBack={() => setSelectedId(null)} />
+      </main>
+    )
+  }
 
   const openFilter = (e: MouseEvent<HTMLButtonElement>) =>
     setFilterPos(popoverPosFor(e.currentTarget, 220))
@@ -108,7 +121,7 @@ export function InboxPage() {
                 {group.label}
               </div>
               {group.items.map((n) => (
-                <NotificationRow key={n.id} notification={n} />
+                <NotificationRow key={n.id} notification={n} onOpen={setSelectedId} />
               ))}
             </div>
           ))

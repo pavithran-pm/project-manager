@@ -292,7 +292,7 @@ function BoardCard({ task, allTasks }: { task: Task; allTasks: Task[] }) {
             className="mt-2 flex cursor-pointer items-center gap-1 text-[12px] text-ink-soft hover:text-ink"
           >
             <ChevronRight className="hidden h-3 w-3 shrink-0 text-ink-faint group-hover/card:block" />
-            <Network className="h-3 w-3 shrink-0 text-ink-faint" />
+            <Network className="h-3 w-3 shrink-0 text-ink-faint group-hover/card:hidden" />
             {subCount === 1 ? '1 subtask' : `${subCount} subtasks`}
           </button>
         )}

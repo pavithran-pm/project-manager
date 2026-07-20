@@ -33,7 +33,13 @@ function LeadingIcon({ icon }: { icon: NotifIcon }) {
   }
 }
 
-export function NotificationRow({ notification: n }: { notification: AppNotification }) {
+export function NotificationRow({
+  notification: n,
+  onOpen,
+}: {
+  notification: AppNotification
+  onOpen?: (id: string) => void
+}) {
   const users = useAppStore((s) => s.users)
   const markRead = useAppStore((s) => s.markRead)
   const clearNotification = useAppStore((s) => s.clearNotification)
@@ -43,7 +49,10 @@ export function NotificationRow({ notification: n }: { notification: AppNotifica
 
   return (
     <div
-      onClick={() => markRead(n.id)}
+      onClick={() => {
+        markRead(n.id)
+        onOpen?.(n.id)
+      }}
       className="group relative flex h-[46px] cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-panel"
     >
       {/* Leading icon */}
