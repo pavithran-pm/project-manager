@@ -61,8 +61,13 @@ tasks/spaces, assignments, statuses, favorites) persist to localStorage.
 - Tasks: create inline, change status (moves groups), assign, due dates
   (overdue coloring), priorities, time estimates — all via popovers; summary
   cards recompute live
+- Task drag-and-drop: reorder within a status group, drag across groups
+  (changes status) and across sprints/lists (changes list), in List, Board and
+  folder-List views + Backlog; multi-select with checkboxes (shift-click for a
+  range) drags several tasks together
 - Sidebar: create Space (modal) / Folder / Sprint Folder / List / Sprint,
-  navigate everywhere, favorites star
+  navigate everywhere, favorites star; expand/collapse spaces & folders and
+  drag to reorder items / move them between folder and space level
 - Global search: Ctrl+K, results across tasks/sprints/lists/docs, Enter to open
 - Anything whose screen isn't replicated yet responds with a toast pointing at
   the build list
