@@ -5,7 +5,7 @@ import { chromium } from 'playwright'
 const url = process.argv[2] ?? 'http://localhost:5173'
 const out = process.argv[3] ?? 'screenshot.png'
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined })
 const page = await browser.newPage({ viewport: { width: 1920, height: 1010 } })
 await page.goto(url, { waitUntil: 'networkidle' })
 await page.waitForTimeout(400)

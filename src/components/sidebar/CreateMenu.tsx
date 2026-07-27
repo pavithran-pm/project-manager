@@ -62,7 +62,8 @@ function MenuItem({
 /** Space "+" popover — the panel only; Sidebar anchors/positions it and owns the backdrop. */
 export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
   const addListToSpace = useAppStore((s) => s.addListToSpace)
-  const addFolderToSpace = useAppStore((s) => s.addFolderToSpace)
+  const openCreateFolder = useAppStore((s) => s.openCreateFolder)
+  const openCreateSprintFolder = useAppStore((s) => s.openCreateSprintFolder)
   const notify = useAppStore((s) => s.notify)
   const soon = (what: string) => () => {
     comingSoon(notify, what)
@@ -94,7 +95,7 @@ export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
         name="Folder"
         description="Group Lists, Docs & more"
         onClick={() => {
-          addFolderToSpace(spaceId, 'folder')
+          openCreateFolder(spaceId)
           onClose()
         }}
       />
@@ -103,7 +104,7 @@ export function CreateMenu({ spaceId, onClose }: CreateMenuProps) {
         name="Sprint Folder"
         description="Organize your Sprints"
         onClick={() => {
-          addFolderToSpace(spaceId, 'sprintFolder')
+          openCreateSprintFolder(spaceId)
           onClose()
         }}
       />

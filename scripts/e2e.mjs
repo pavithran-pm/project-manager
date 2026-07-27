@@ -3,7 +3,9 @@
 import { chromium } from 'playwright'
 
 const BASE = process.argv[2] ?? 'http://localhost:5173'
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+// Use Playwright's bundled Chromium by default; set PW_CHROMIUM to override
+// (e.g. the Linux CI path /opt/pw-browsers/chromium).
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined })
 const page = await browser.newPage({ viewport: { width: 1920, height: 1010 } })
 
 const results = []
@@ -375,6 +377,97 @@ await pause(400)
 check('inbox: notification detail opens', (await count('text=Clear')) >= 1)
 await page.locator('[aria-label="Back"], button:has-text("Clear")').first().click().catch(() => {})
 await pause(200)
+
+// ---------- Sidebar node context menu: rename + delete-confirm ----------
+await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' })
+await page.evaluate(() => localStorage.clear())
+await page.reload({ waitUntil: 'networkidle' })
+await pause(500)
+const sidebar = page.getByRole('complementary')
+await sidebar.getByText('MVP - MSM', { exact: true }).click({ button: 'right' })
+await pause(250)
+check('sidebar menu: opens on folder', (await count('text=Sharing & Permissions')) >= 1)
+check(
+  'sidebar menu: has Rename + config items',
+  (await count('text=Rename')) >= 1 && (await count('text=Task statuses')) >= 1,
+)
+await page.getByText('Rename', { exact: true }).click()
+await pause(200)
+await page.keyboard.press('Control+a')
+await page.keyboard.type('Renamed Folder')
+await page.keyboard.press('Enter')
+await pause(250)
+check(
+  'sidebar menu: inline rename persists',
+  (await sidebar.getByText('Renamed Folder', { exact: true }).count()) >= 1 &&
+    (await sidebar.getByText('MVP - MSM', { exact: true }).count()) === 0,
+)
+await sidebar.getByText('Renamed Folder', { exact: true }).click({ button: 'right' })
+await pause(250)
+await page.getByText('Delete', { exact: true }).click()
+await pause(250)
+check('sidebar menu: delete confirm shows', (await count('text=will be deleted')) >= 1)
+await page.getByRole('button', { name: 'Cancel' }).click()
+await pause(200)
+check(
+  'sidebar menu: cancel keeps folder',
+  (await sidebar.getByText('Renamed Folder', { exact: true }).count()) >= 1,
+)
+
+// ---------- New modal surfaces: Create Sprint Folder / Task statuses / Create Folder ----------
+await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' })
+await page.evaluate(() => localStorage.clear())
+await page.reload({ waitUntil: 'networkidle' })
+await pause(500)
+const sb2 = page.getByRole('complementary')
+
+// Create Sprint Folder wizard: open → Automations sub-view → Create
+await sb2.locator('[aria-label="Add to MSM"]').click()
+await pause(250)
+await page.getByText('Sprint Folder', { exact: true }).click()
+await pause(300)
+check('sprint-folder: wizard opens', (await count('text=Create Sprint folder')) >= 1)
+await page.getByText('Automate Sprints').click()
+await pause(250)
+check('sprint-folder: automations view renders rules', (await count('text=Mark Sprint as done')) >= 1)
+await page.getByText('Create', { exact: true }).click()
+await pause(300)
+check(
+  'sprint-folder: Create adds folder to sidebar',
+  (await sb2.getByText('Sprint Folder', { exact: true }).count()) >= 1,
+)
+
+// Task statuses editor: opens with real data, add a status
+await sb2.getByText('MVP - MSM', { exact: true }).click({ button: 'right' })
+await pause(250)
+await page.getByText('Task statuses', { exact: true }).click()
+await pause(300)
+check(
+  'statuses: editor opens with real registry',
+  (await count('text=Use custom statuses')) >= 1 && (await count('text=TO DO')) >= 1,
+)
+await page.getByText('Add status', { exact: true }).first().click()
+await pause(150)
+await page.keyboard.type('E2E STATUS')
+await page.keyboard.press('Enter')
+await pause(250)
+check('statuses: add status works', (await count('text=E2E STATUS')) >= 1)
+await page.getByRole('button', { name: 'Apply changes' }).click()
+await pause(200)
+
+// Create Folder modal: open → name → Create
+await sb2.locator('[aria-label="Add to MSM"]').click()
+await pause(250)
+await page.getByText('Folder', { exact: true }).click()
+await pause(300)
+check('create-folder: modal opens', (await count('text=Use Folders to organize your Lists')) >= 1)
+await page.fill('input[placeholder="e.g. Project, Client, Team"]', 'QA Folder')
+await page.getByText('Create', { exact: true }).click()
+await pause(300)
+check(
+  'create-folder: Create adds folder to sidebar',
+  (await sb2.getByText('QA Folder', { exact: true }).count()) >= 1,
+)
 
 console.log(results.join('\n'))
 console.log(`\n${results.length - failures}/${results.length} passed`)

@@ -15,6 +15,9 @@ import { TaskModal } from './features/task/TaskModal'
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage'
 import { BrainPage } from './features/ai/BrainPage'
 import { SpaceOverviewPage } from './features/space/SpaceOverviewPage'
+import { CreateSprintFolderModal } from './components/sidebar/CreateSprintFolderModal'
+import { CreateFolderModal } from './components/sidebar/CreateFolderModal'
+import { TaskStatusesModal } from './components/space/TaskStatusesModal'
 
 // Hash routing lets the single-file build (artifact / static hosting) deep-link
 // without a history-fallback server; the dev/production server keeps clean URLs.
@@ -86,6 +89,9 @@ export default function App() {
         <TaskModal />
         <NewTaskModal />
         <CustomizeViewPanel />
+        <CreateSprintFolderModal />
+        <CreateFolderModal />
+        <TaskStatusesModal />
         <SelectionBar />
         <ToastHost />
       </div>

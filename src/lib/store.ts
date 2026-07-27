@@ -9,6 +9,7 @@ import type {
   FolderItem,
   Space,
   SpaceFolder,
+  StatusGroup,
   TabId,
   Task,
   TaskPriority,
@@ -66,6 +67,12 @@ interface AppState {
   newTaskFor: string | null
   /** Customize-view side panel open */
   customizeViewOpen: boolean
+  /** spaceId the Create Sprint Folder wizard is open for (null = closed) */
+  createSprintFolderFor: string | null
+  /** spaceId the Create Folder modal is open for (null = closed) */
+  createFolderFor: string | null
+  /** Task statuses editor open */
+  statusesOpen: boolean
   /** Ephemeral multi-select for bulk drag / actions in list & board views. */
   selectedTaskIds: string[]
   /** Anchor for shift-click range selection. */
@@ -92,6 +99,17 @@ interface AppState {
   moveFolder: (folderId: string, target: { spaceId: string; beforeFolderId?: string }) => void
   /** Reorder a space (dropping before `beforeSpaceId`, else append). */
   moveSpace: (spaceId: string, beforeSpaceId?: string) => void
+  /** Rename a space / folder / folder-item (list, sprint, whiteboard). */
+  renameSpace: (spaceId: string, name: string) => void
+  renameFolder: (folderId: string, name: string) => void
+  renameFolderItem: (itemId: string, name: string) => void
+  /** Delete a space / folder / folder-item, cascading to its tasks & favorites. */
+  deleteSpace: (spaceId: string) => void
+  deleteFolder: (folderId: string) => void
+  deleteFolderItem: (itemId: string) => void
+  /** Duplicate a folder / folder-item next to the original (fresh ids, no tasks copied). */
+  duplicateFolder: (folderId: string) => void
+  duplicateFolderItem: (itemId: string) => void
   setSearchOpen: (open: boolean) => void
   toggleInboxUnreadOnly: () => void
   toggleFavorite: (id: string) => void
@@ -104,6 +122,19 @@ interface AppState {
   openNewTask: (listId: string) => void
   closeNewTask: () => void
   setCustomizeViewOpen: (open: boolean) => void
+  openCreateSprintFolder: (spaceId: string) => void
+  closeCreateSprintFolder: () => void
+  /** Create a Sprint Folder with `sprintCount` sprints named "Sprint 1..N". */
+  createSprintFolder: (spaceId: string, name: string, sprintCount: number) => void
+  openCreateFolder: (spaceId: string) => void
+  closeCreateFolder: () => void
+  createFolder: (spaceId: string, name: string) => void
+  openStatuses: () => void
+  closeStatuses: () => void
+  /** Add / rename / recolor a status in the global registry (Task statuses editor). */
+  addTaskStatus: (group: StatusGroup, label: string, color: string) => void
+  renameTaskStatus: (statusId: string, label: string) => void
+  setTaskStatusColor: (statusId: string, color: string) => void
 
   setTaskStatus: (taskId: string, statusId: string) => void
   /** Move one or more tasks to a list+status, optionally reordering before a task. */
@@ -135,6 +166,7 @@ const partializeState = (s: AppState) => ({
   notifications: s.notifications,
   tasks: s.tasks,
   spaces: s.spaces,
+  taskStatuses: s.taskStatuses,
   favorites: s.favorites,
   bannerDismissed: s.bannerDismissed,
   inboxUnreadOnly: s.inboxUnreadOnly,
@@ -184,6 +216,9 @@ export const useAppStore = create<AppState>()(
       sidebarCollapsed: false,
       newTaskFor: null,
       customizeViewOpen: false,
+      createSprintFolderFor: null,
+      createFolderFor: null,
+      statusesOpen: false,
       selectedTaskIds: [],
       lastSelectedTaskId: null,
 
@@ -346,6 +381,122 @@ export const useAppStore = create<AppState>()(
           const rest = s.spaces.filter((sp) => sp.id !== spaceId)
           return { spaces: insertBefore(rest, moved, beforeSpaceId) }
         }),
+      renameSpace: (spaceId, name) =>
+        set((s) => {
+          const trimmed = name.trim()
+          if (!trimmed) return s
+          return {
+            spaces: s.spaces.map((sp) =>
+              sp.id === spaceId ? { ...sp, name: trimmed, abbr: trimmed.charAt(0).toUpperCase() } : sp,
+            ),
+          }
+        }),
+      renameFolder: (folderId, name) =>
+        set((s) => {
+          const trimmed = name.trim()
+          if (!trimmed) return s
+          return {
+            spaces: s.spaces.map((sp) => ({
+              ...sp,
+              folders: sp.folders.map((f) => (f.id === folderId ? { ...f, name: trimmed } : f)),
+            })),
+          }
+        }),
+      renameFolderItem: (itemId, name) =>
+        set((s) => {
+          const trimmed = name.trim()
+          if (!trimmed) return s
+          const rename = (items: FolderItem[]) =>
+            items.map((i) => (i.id === itemId ? { ...i, name: trimmed } : i))
+          return {
+            spaces: s.spaces.map((sp) => ({
+              ...sp,
+              folders: sp.folders.map((f) => ({ ...f, items: rename(f.items) })),
+              items: rename(sp.items),
+            })),
+          }
+        }),
+      deleteSpace: (spaceId) =>
+        set((s) => {
+          const sp = s.spaces.find((x) => x.id === spaceId)
+          if (!sp) return s
+          const listIds = new Set<string>([
+            ...sp.items.map((i) => i.id),
+            ...sp.folders.flatMap((f) => f.items.map((i) => i.id)),
+          ])
+          return {
+            spaces: s.spaces.filter((x) => x.id !== spaceId),
+            tasks: s.tasks.filter((t) => !listIds.has(t.listId)),
+            favorites: s.favorites.filter((f) => f !== spaceId && !listIds.has(f)),
+          }
+        }),
+      deleteFolder: (folderId) =>
+        set((s) => {
+          const found = findFolder(s.spaces, folderId)
+          if (!found) return s
+          const listIds = new Set(found.folder.items.map((i) => i.id))
+          return {
+            spaces: s.spaces.map((sp) => ({
+              ...sp,
+              folders: sp.folders.filter((f) => f.id !== folderId),
+            })),
+            tasks: s.tasks.filter((t) => !listIds.has(t.listId)),
+            favorites: s.favorites.filter((f) => f !== folderId && !listIds.has(f)),
+          }
+        }),
+      deleteFolderItem: (itemId) =>
+        set((s) => ({
+          spaces: s.spaces.map((sp) => ({
+            ...sp,
+            folders: sp.folders.map((f) => ({ ...f, items: f.items.filter((i) => i.id !== itemId) })),
+            items: sp.items.filter((i) => i.id !== itemId),
+          })),
+          tasks: s.tasks.filter((t) => t.listId !== itemId),
+          favorites: s.favorites.filter((f) => f !== itemId),
+        })),
+      duplicateFolder: (folderId) =>
+        set((s) => {
+          let done = false
+          const spaces = s.spaces.map((sp) => {
+            const idx = sp.folders.findIndex((f) => f.id === folderId)
+            if (idx < 0) return sp
+            const orig = sp.folders[idx]
+            const dup: SpaceFolder = {
+              ...orig,
+              id: freshId('folder'),
+              items: orig.items.map((i) => ({ ...i, id: freshId(i.icon) })),
+            }
+            done = true
+            return {
+              ...sp,
+              folders: [...sp.folders.slice(0, idx + 1), dup, ...sp.folders.slice(idx + 1)],
+            }
+          })
+          return done ? { spaces } : s
+        }),
+      duplicateFolderItem: (itemId) =>
+        set((s) => {
+          let done = false
+          const clone = (items: FolderItem[]) => {
+            const idx = items.findIndex((i) => i.id === itemId)
+            if (idx < 0) return items
+            const orig = items[idx]
+            done = true
+            const dup: FolderItem = { ...orig, id: freshId(orig.icon) }
+            return [...items.slice(0, idx + 1), dup, ...items.slice(idx + 1)]
+          }
+          const spaces = s.spaces.map((sp) => {
+            const folders = sp.folders.map((f) => {
+              if (done) return f
+              const items = clone(f.items)
+              return items === f.items ? f : { ...f, items }
+            })
+            if (done) return { ...sp, folders }
+            const items = clone(sp.items)
+            return items === sp.items ? { ...sp, folders } : { ...sp, folders, items }
+          })
+          return done ? { spaces } : s
+        }),
       setSearchOpen: (open) => set({ searchOpen: open }),
       toggleInboxUnreadOnly: () => set((s) => ({ inboxUnreadOnly: !s.inboxUnreadOnly })),
       toggleFavorite: (id) =>
@@ -374,6 +525,60 @@ export const useAppStore = create<AppState>()(
       openNewTask: (listId) => set({ newTaskFor: listId }),
       closeNewTask: () => set({ newTaskFor: null }),
       setCustomizeViewOpen: (open) => set({ customizeViewOpen: open }),
+      openCreateSprintFolder: (spaceId) => set({ createSprintFolderFor: spaceId }),
+      closeCreateSprintFolder: () => set({ createSprintFolderFor: null }),
+      createSprintFolder: (spaceId, name, sprintCount) =>
+        set((s) => {
+          const trimmed = name.trim() || 'Sprint Folder'
+          const n = Math.max(1, Math.min(Math.floor(sprintCount) || 1, 24))
+          const items: FolderItem[] = Array.from({ length: n }, (_, i) => ({
+            id: freshId('sprint'),
+            name: `Sprint ${i + 1}`,
+            icon: 'sprint' as const,
+          }))
+          const folder: SpaceFolder = { id: freshId('sprints'), name: trimmed, items }
+          return {
+            spaces: s.spaces.map((sp) =>
+              sp.id === spaceId ? { ...sp, folders: [...sp.folders, folder] } : sp,
+            ),
+            createSprintFolderFor: null,
+          }
+        }),
+      openCreateFolder: (spaceId) => set({ createFolderFor: spaceId }),
+      closeCreateFolder: () => set({ createFolderFor: null }),
+      createFolder: (spaceId, name) =>
+        set((s) => {
+          const trimmed = name.trim() || 'Folder'
+          const folder: SpaceFolder = { id: freshId('folder'), name: trimmed, items: [] }
+          return {
+            spaces: s.spaces.map((sp) =>
+              sp.id === spaceId ? { ...sp, folders: [...sp.folders, folder] } : sp,
+            ),
+            createFolderFor: null,
+          }
+        }),
+      openStatuses: () => set({ statusesOpen: true }),
+      closeStatuses: () => set({ statusesOpen: false }),
+      addTaskStatus: (group, label, color) =>
+        set((s) => {
+          const trimmed = label.trim()
+          if (!trimmed) return s
+          const id = freshId('status')
+          return { taskStatuses: { ...s.taskStatuses, [id]: { id, label: trimmed, color, group } } }
+        }),
+      renameTaskStatus: (statusId, label) =>
+        set((s) => {
+          const trimmed = label.trim()
+          const cur = s.taskStatuses[statusId]
+          if (!cur || !trimmed) return s
+          return { taskStatuses: { ...s.taskStatuses, [statusId]: { ...cur, label: trimmed } } }
+        }),
+      setTaskStatusColor: (statusId, color) =>
+        set((s) => {
+          const cur = s.taskStatuses[statusId]
+          if (!cur) return s
+          return { taskStatuses: { ...s.taskStatuses, [statusId]: { ...cur, color } } }
+        }),
 
       setTaskStatus: (taskId, statusId) =>
         set((s) => ({ tasks: patchTask(s.tasks, taskId, { statusId }) })),
@@ -616,6 +821,15 @@ export function groupTasksByStatus(tasks: Task[], statuses: Record<string, TaskS
       items: tasks.filter((t) => t.statusId === statusId),
     }))
     .filter((g) => g.items.length > 0)
+}
+
+/** All statuses grouped into the 4 ClickUp status groups (for the Statuses editor). */
+export function statusesByGroup(statuses: Record<string, TaskStatus>) {
+  const groups: StatusGroup[] = ['not-started', 'active', 'done', 'closed']
+  const ordered = statusOrder.map((id) => statuses[id]).filter(Boolean) as TaskStatus[]
+  const extras = Object.values(statuses).filter((st) => !statusOrder.includes(st.id))
+  const all = [...ordered, ...extras]
+  return groups.map((group) => ({ group, statuses: all.filter((st) => st.group === group) }))
 }
 
 /** Rollup numbers for a list view's summary cards and banner. */
