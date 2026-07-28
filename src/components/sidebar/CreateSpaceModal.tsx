@@ -1,17 +1,74 @@
-import { useEffect, useState } from 'react'
-import { ChevronDown, Info, UserRound, X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { comingSoon, useAppStore } from '../../lib/store'
+import {
+  CLICKAPPS,
+  SPACE_ICON_COLORS,
+  SPACE_VIEWS,
+  type SpacePreset,
+} from './space-wizard/contract'
+import { BasicsStep } from './space-wizard/BasicsStep'
+import { WorkflowStep } from './space-wizard/WorkflowStep'
+import { ViewsPanel } from './space-wizard/ViewsPanel'
+import { ClickAppsPanel } from './space-wizard/ClickAppsPanel'
+import { StatusesPanel } from './space-wizard/StatusesPanel'
 
-/** "Create a Space" dialog. Always mounted by Sidebar; renders nothing until opened. */
+type View = 'basics' | 'workflow' | 'views' | 'clickapps' | 'statuses'
+
+const defaultViews = (): Record<string, boolean> =>
+  Object.fromEntries(SPACE_VIEWS.map((v) => [v.key, Boolean(v.defaultOn || v.required)]))
+const defaultClickApps = (): Record<string, boolean> =>
+  Object.fromEntries(CLICKAPPS.map((c) => [c.key, Boolean(c.defaultOn)]))
+
+/**
+ * "Create a Space" wizard. Always mounted by Sidebar; renders nothing until opened.
+ * Owns ALL selection state + store wiring; each step/panel is a pure presentational
+ * component (see space-wizard/contract.ts). Views/ClickApps/Statuses are local sub-views
+ * (not separate store flags), Back-navigable to the workflow step.
+ *
+ * Honest scope: creating a Space applies the name, icon color, and private flag. The
+ * preset, default-views toggles, ClickApps grid, and statuses are faithful UI that don't
+ * change app behavior (there's no per-Space view/status/ClickApp system to persist into).
+ */
 export function CreateSpaceModal() {
   const open = useAppStore((s) => s.createSpaceOpen)
   const closeCreateSpace = useAppStore((s) => s.closeCreateSpace)
   const createSpace = useAppStore((s) => s.createSpace)
+  const users = useAppStore((s) => s.users)
+  const currentUserId = useAppStore((s) => s.currentUserId)
   const notify = useAppStore((s) => s.notify)
 
+  const members = useMemo(
+    () =>
+      Object.values(users)
+        .filter((u) => !u.deactivated)
+        .map((u) => ({ id: u.id, name: u.name, initials: u.initials, color: u.color })),
+    [users],
+  )
+
+  const [view, setView] = useState<View>('basics')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [color, setColor] = useState(SPACE_ICON_COLORS[0])
   const [isPrivate, setIsPrivate] = useState(false)
+  const [shareWith, setShareWith] = useState<string[]>([])
+  const [preset, setPreset] = useState<SpacePreset>('project')
+  const [viewsEnabled, setViewsEnabled] = useState<Record<string, boolean>>(defaultViews)
+  const [clickAppsEnabled, setClickAppsEnabled] = useState<Record<string, boolean>>(defaultClickApps)
+
+  // Reset the whole wizard each time it (re)opens — it stays mounted.
+  // useLayoutEffect commits the reset before paint, so no stale frame flashes.
+  useLayoutEffect(() => {
+    if (!open) return
+    setView('basics')
+    setName('')
+    setDescription('')
+    setColor(SPACE_ICON_COLORS[0])
+    setIsPrivate(false)
+    setShareWith([])
+    setPreset('project')
+    setViewsEnabled(defaultViews())
+    setClickAppsEnabled(defaultClickApps())
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -24,13 +81,30 @@ export function CreateSpaceModal() {
 
   if (!open) return null
 
-  const letter = name.trim() ? name.trim().charAt(0).toUpperCase() : 'S'
+  // Turning a Space private auto-includes the creator ("Me"), matching ClickUp.
+  const handlePrivate = (v: boolean) => {
+    setIsPrivate(v)
+    setShareWith((cur) => (v ? (cur.length ? cur : [currentUserId]) : []))
+  }
+  const toggleShare = (id: string) =>
+    setShareWith((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+  const toggleView = (key: string) => {
+    const def = SPACE_VIEWS.find((v) => v.key === key)
+    if (def?.required) return
+    setViewsEnabled((cur) => ({ ...cur, [key]: !cur[key] }))
+  }
+  const toggleClickApp = (key: string) => {
+    const def = CLICKAPPS.find((c) => c.key === key)
+    if (def?.gated) return
+    setClickAppsEnabled((cur) => ({ ...cur, [key]: !cur[key] }))
+  }
+  const turnOffAllClickApps = () =>
+    setClickAppsEnabled(() =>
+      Object.fromEntries(CLICKAPPS.map((c) => [c.key, false])),
+    )
 
-  const submit = () => {
-    createSpace(name, description, isPrivate)
-    setName('')
-    setDescription('')
-    setIsPrivate(false)
+  const create = () => {
+    createSpace(name.trim() || 'New Space', description, isPrivate, color)
   }
 
   return (
@@ -40,102 +114,64 @@ export function CreateSpaceModal() {
         if (e.target === e.currentTarget) closeCreateSpace()
       }}
     >
-      <div className="animate-pop-in relative w-[560px] max-w-[92vw] rounded-xl bg-white p-6 shadow-2xl">
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={closeCreateSpace}
-          className="absolute top-4 right-4 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-panel hover:bg-hover"
-        >
-          <X className="h-3.5 w-3.5 text-ink-soft" />
-        </button>
-
-        <h2 className="text-[17px] font-semibold text-ink">Create a Space</h2>
-        <p className="mt-1 text-[13px] text-ink-soft">
-          A Space represents teams, departments, or groups, each with its own Lists, workflows, and
-          settings.
-        </p>
-
-        <div className="mt-5 mb-1.5 text-[12.5px] font-semibold text-ink">Icon & name</div>
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-line-strong bg-panel text-[15px] font-semibold text-ink-soft">
-            {letter}
-          </span>
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Marketing, Engineering, HR"
-            className="h-10 flex-1 rounded-lg border-2 border-ink px-3 text-[14px] outline-none placeholder:text-ink-faint"
-          />
-        </div>
-
-        <div className="mt-4 mb-1.5 text-[12.5px] font-semibold text-ink">
-          Description <span className="font-normal text-ink-faint">(optional)</span>
-        </div>
-        <input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="h-9 w-full rounded-lg border border-line-strong px-3 text-[13.5px] outline-none focus:border-ink"
+      {view === 'basics' && (
+        <BasicsStep
+          name={name}
+          onName={setName}
+          description={description}
+          onDescription={setDescription}
+          color={color}
+          onColor={setColor}
+          isPrivate={isPrivate}
+          onPrivate={handlePrivate}
+          shareWith={shareWith}
+          onToggleShare={toggleShare}
+          members={members}
+          currentUserId={currentUserId}
+          onNext={() => setView('workflow')}
+          onClose={closeCreateSpace}
+          onUseTemplates={() => comingSoon(notify, 'Space templates')}
         />
-
-        <div className="mt-5 flex items-center gap-1.5">
-          <UserRound className="h-[15px] w-[15px] shrink-0 text-ink-soft" />
-          <span className="text-[13.5px] text-ink">Default permission</span>
-          <Info className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
-          <button
-            type="button"
-            onClick={() => comingSoon(notify, 'Permission levels')}
-            className="ml-auto flex h-7 cursor-pointer items-center gap-1 rounded-md border border-line-strong px-2 text-[12.5px] text-ink hover:bg-hover"
-          >
-            Full edit
-            <ChevronDown className="h-3 w-3 text-ink-faint" />
-          </button>
-        </div>
-
-        <div className="mt-5 flex items-center">
-          <div>
-            <div className="text-[13.5px] font-medium text-ink">Make Private</div>
-            <div className="text-[12.5px] text-ink-soft">
-              Only you and invited members have access
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isPrivate}
-            aria-label="Make Private"
-            onClick={() => setIsPrivate((p) => !p)}
-            className={`ml-auto h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors ${
-              isPrivate ? 'bg-brand' : 'bg-line-strong'
-            }`}
-          >
-            <span
-              className={`block h-4 w-4 rounded-full bg-white transition-transform ${
-                isPrivate ? 'translate-x-4' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="-mx-6 -mb-6 mt-6 flex items-center justify-between rounded-b-xl border-t border-line bg-panel px-6 py-4">
-          <button
-            type="button"
-            onClick={() => comingSoon(notify, 'Space templates')}
-            className="cursor-pointer text-[13.5px] text-ink-soft hover:text-ink"
-          >
-            Use Templates
-          </button>
-          <button
-            type="button"
-            disabled={!name.trim()}
-            onClick={submit}
-            className="h-9 cursor-pointer rounded-lg bg-[#1f2228] px-5 text-[13.5px] font-medium text-white hover:bg-black disabled:cursor-default disabled:opacity-40"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
+      )}
+      {view === 'workflow' && (
+        <WorkflowStep
+          preset={preset}
+          onPreset={setPreset}
+          onOpenViews={() => setView('views')}
+          onOpenStatuses={() => setView('statuses')}
+          onOpenClickApps={() => setView('clickapps')}
+          onBack={() => setView('basics')}
+          onCreate={create}
+          onClose={closeCreateSpace}
+        />
+      )}
+      {view === 'views' && (
+        <ViewsPanel
+          enabled={viewsEnabled}
+          onToggle={toggleView}
+          onBack={() => setView('workflow')}
+          onClose={closeCreateSpace}
+          onDone={() => setView('workflow')}
+        />
+      )}
+      {view === 'clickapps' && (
+        <ClickAppsPanel
+          enabled={clickAppsEnabled}
+          onToggle={toggleClickApp}
+          onTurnOffAll={turnOffAllClickApps}
+          onBack={() => setView('workflow')}
+          onClose={closeCreateSpace}
+          onDone={() => setView('workflow')}
+        />
+      )}
+      {view === 'statuses' && (
+        <StatusesPanel
+          preset={preset}
+          onBack={() => setView('workflow')}
+          onClose={closeCreateSpace}
+          onDone={() => setView('workflow')}
+        />
+      )}
     </div>
   )
 }

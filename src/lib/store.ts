@@ -86,7 +86,7 @@ interface AppState {
   clearAll: () => void
   openCreateSpace: () => void
   closeCreateSpace: () => void
-  createSpace: (name: string, description: string, isPrivate: boolean) => void
+  createSpace: (name: string, description: string, isPrivate: boolean, color?: string) => void
   addListToSpace: (spaceId: string) => void
   addFolderToSpace: (spaceId: string, kind: 'folder' | 'sprintFolder') => void
   addSprintToFolder: (spaceId: string, folderId: string) => void
@@ -250,7 +250,7 @@ export const useAppStore = create<AppState>()(
         })),
       openCreateSpace: () => set({ createSpaceOpen: true }),
       closeCreateSpace: () => set({ createSpaceOpen: false }),
-      createSpace: (name, _description, isPrivate) =>
+      createSpace: (name, _description, isPrivate, color) =>
         set((s) => {
           const trimmed = name.trim()
           if (!trimmed) return s
@@ -258,7 +258,7 @@ export const useAppStore = create<AppState>()(
             id: freshId('space'),
             name: trimmed,
             abbr: trimmed.charAt(0).toUpperCase(),
-            color: SPACE_COLORS[s.spaces.length % SPACE_COLORS.length],
+            color: color ?? SPACE_COLORS[s.spaces.length % SPACE_COLORS.length],
             isPrivate,
             folders: [],
             items: [],

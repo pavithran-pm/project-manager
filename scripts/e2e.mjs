@@ -469,6 +469,56 @@ check(
   (await sb2.getByText('QA Folder', { exact: true }).count()) >= 1,
 )
 
+// ---------- Create a Space wizard (multi-step) ----------
+await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' })
+await page.evaluate(() => localStorage.clear())
+await page.reload({ waitUntil: 'networkidle' })
+await pause(500)
+const sb3 = page.getByRole('complementary')
+await sb3.getByText('New Space', { exact: true }).click()
+await pause(300)
+check(
+  'space-wizard: step 1 opens',
+  (await count('text=Create a Space')) >= 1 && (await count('text=Icon & name')) >= 1,
+)
+await page.fill('input[placeholder*="Marketing, Engineering"]', 'QA Space')
+await page.getByRole('button', { name: 'Next' }).click()
+await pause(300)
+check(
+  'space-wizard: workflow step',
+  (await count('text=Define your workflow')) >= 1 && (await count('text=Project Management')) >= 1,
+)
+await page.getByText('Default views', { exact: true }).click()
+await pause(250)
+check(
+  'space-wizard: views panel',
+  (await count('text=Default settings for views')) >= 1 && (await count('text=Workload')) >= 1,
+)
+await page.getByText('Done', { exact: true }).click()
+await pause(200)
+await page.getByText('ClickApps', { exact: true }).click()
+await pause(250)
+check(
+  'space-wizard: clickapps panel',
+  (await count('text=Enable ClickApps')) >= 1 && (await count('text=Time Tracking')) >= 1,
+)
+await page.getByText('Done', { exact: true }).click()
+await pause(200)
+await page.getByText('Task statuses', { exact: true }).click()
+await pause(250)
+check(
+  'space-wizard: statuses panel',
+  (await count('text=Apply changes')) >= 1 && (await count('text=IN PROGRESS')) >= 1,
+)
+await page.getByText('Apply changes', { exact: true }).click()
+await pause(200)
+await page.getByText('Create Space', { exact: true }).click()
+await pause(400)
+check(
+  'space-wizard: Create adds space to sidebar',
+  (await sb3.getByText('QA Space', { exact: true }).count()) >= 1,
+)
+
 console.log(results.join('\n'))
 console.log(`\n${results.length - failures}/${results.length} passed`)
 await browser.close()
